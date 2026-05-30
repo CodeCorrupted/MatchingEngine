@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.control.Label?>
+<?import javafx.geometry.Insets?>
+
+<AnchorPane fx:id="rootPane"
+    prefWidth="720"
+    prefHeight="1650"
+    style="-fx-background-color: transparent;"
+    xmlns="http://javafx.com/javafx/17"
+    xmlns:fx="http://javafx.com/fxml/1"
+    fx:controller="CambiarControlador"> <!--CAMBIAR CONTROLADOR-->
+    
+    <!-- Ventana flotante inferior (siempre anclada abajo, sin interacciones) -->
+    <StackPane
+        prefWidth="720"
+        prefHeight="220"
+        style="-fx-background-color: rgba(255, 255, 255, 0.76); 
+               -fx-background-radius: 24 24 0 0; 
+               -fx-border-color: rgba(0,0,0,0.08); 
+               -fx-border-width: 1;"
+        mouseTransparent="true"
+        pickOnBounds="false"
+        AnchorPane.leftAnchor="0"
+        AnchorPane.rightAnchor="0"
+        AnchorPane.bottomAnchor="0">
+
+        <VBox
+            alignment="CENTER"
+            spacing="10"
+            style="-fx-padding: 16;">
+
+            <StackPane
+                prefWidth="550"
+                prefHeight="60"
+                maxWidth="550"
+                style="-fx-background-color: black;
+                       -fx-background-radius: 5;">
+                <Label
+                    text="BIENVENIDO A"
+                    style="-fx-text-fill: white;
+                           -fx-font-family: 'Arial Black';
+                           -fx-font-size: 30px;
+                           -fx-font-weight: bold;" />
+            </StackPane>
+
+            <!-- ② "MATCHING ENGINE" en fuente Stencil -->
+            <Label
+                text="&quot;MATCHING ENGINE&quot;"
+                style="-fx-text-fill: black;
+                       -fx-font-family: 'Stencil';
+                       -fx-font-size: 60px;
+                       -fx-font-weight: bold;" />
+
+            <!-- ③ Subtítulo en Arial Black -->
+            <Label
+                text="&quot;Te conectamos con tu Destino...&quot;"
+                style="-fx-text-fill: black;
+                       -fx-font-family: 'Arial Black';
+                       -fx-font-size: 30px;" />
+        </VBox>
+    </StackPane>
+
+</AnchorPane>
