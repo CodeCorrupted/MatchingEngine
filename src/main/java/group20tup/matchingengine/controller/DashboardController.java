@@ -13,6 +13,7 @@ import group20tup.matchingengine.model.utilidades.sistema.EstadisticasSimulacion
 import group20tup.matchingengine.model.utilidades.sistema.GestorSimulacion;
 import group20tup.matchingengine.model.utilidades.sistema.SistemaViajes;
 import group20tup.matchingengine.view.MapCanvas;
+import group20tup.matchingengine.controller.ColaDespachoController;
 import group20tup.matchingengine.view.ProyeccionMapa;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
@@ -39,6 +40,8 @@ import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
 import javafx.util.Duration;
+
+import java.util.List;
 import java.util.Random;
 
 /**
@@ -75,8 +78,14 @@ public class DashboardController {
     private Slider sliderVelocidad;
     @FXML
     private Label lblVelocidad;
+    @FXML
+    private Button btnToggleMapa;
 
     private VehiculoDisponibleController ventanaVehiculoActiva = null;
+    private Stage ventanaVehiculoSolicitadoActiva = null;
+    private Stage ventanaVehiculosOcupadosActiva = null;
+    private Stage ventanaColaDespachoActiva = null;
+    private ColaDespachoController colaDespachoCtrl;
 
     private GrafoMapa grafoMapa;
     private ProyeccionMapa proyeccion;
@@ -179,38 +188,55 @@ public class DashboardController {
      * @param usuario Usuario que solicita el viaje
      */
     private void solicitarViajeUI(Usuario usuario) {
-        // If a vehicle is already approaching this user, show info instead of re-dispatching
+        // Caso 3: usuario ya tiene vehículo APROXIMANDO
         for (int i = 0; i < sistema.totalVehiculos(); i++) {
             Vehiculo v = sistema.getVehiculo(i);
             if (v.getEstado() == EstadoVehiculo.APROXIMANDO
                     && v.getPasajeroAbordo() != null
                     && v.getPasajeroAbordo().equals(usuario)) {
-                double eta = sistema.calcularETA(v.getNodoActual(), usuario.getNodoOrigen());
+                // Si la ventana ya está abierta, no hacer nada
+                if (ventanaVehiculoSolicitadoActiva != null && ventanaVehiculoSolicitadoActiva.isShowing()) {
+                    return;
+                }
+                // Si está cerrada, reabrirla
+                double eta    = sistema.calcularETA(v.getNodoActual(), usuario.getNodoOrigen());
                 double distKm = eta * GrafoMapa.VELOCIDAD_PROMEDIO_M_S / 1000.0;
                 double tarifa = sistema.calcularTarifa(eta);
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Viaje en curso");
-                alert.setHeaderText("Un vehiculo ya se dirige hacia el usuario");
-                alert.setContentText(String.format(
-                        "Vehiculo: %s\nETA: %.0f s\nDistancia: %.2f km\nTarifa: $%.2f",
-                        v.getPatente(), eta, distKm, tarifa));
-                alert.show();
-                mostrarInfoVehiculo(v);
+                try {
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource(
+                            "/group20tup/matchingengine/fxml/VehiculoSolicitado.fxml"));
+                    Parent root = loader.load();
+                    VehiculoSolicitadoController ctrl = loader.getController();
+                    ctrl.setDatos(v.getPatente(), eta, distKm, tarifa);
+                    ventanaVehiculoSolicitadoActiva = mostrarVentana(root, "Viaje asignado", 360, 230);
+                    ctrl.setStage(ventanaVehiculoSolicitadoActiva);
+                } catch (Exception ex) {
+                    System.err.println("ERROR al abrir VehiculoSolicitado: " + ex.getMessage());
+                    ex.printStackTrace();
+                }
+                lblInfo.setText(String.format(
+                        "Vehiculo: %s\nEstado: %s\nPosicion: nodo %d\nUbicacion: %s",
+                        v.getPatente(), v.getEstado(), v.getNodoActual(),
+                        ((MetadataNodo) grafoMapa.getListaEsquinas().devolver(v.getNodoActual())).getNombreEsquina()));
                 return;
             }
         }
 
-        // If dispatch is already running for this user, show progress and leave it running
+        // Caso: despacho ya en curso para este usuario
         if (sistema.hayDespachoActivo() && usuario.equals(this.usuarioDespachando)) {
             lblInfo.setText("Buscando conductor...\n("
                     + sistema.getCandidatosProcesadosDespacho() + "/"
                     + sistema.getTotalCandidatosDespacho() + ")");
             return;
-        }
+        }   
 
-        if (pausaDespacho != null) {
-            pausaDespacho.stop();
+        if (ventanaColaDespachoActiva != null) {
+            ventanaColaDespachoActiva.close();
+            ventanaColaDespachoActiva = null;
         }
+        colaDespachoCtrl = null;
+
+        if (pausaDespacho != null) pausaDespacho.stop();
         sistema.cancelarDespacho();
 
         boolean algunDisponible = false;
@@ -220,13 +246,9 @@ public class DashboardController {
             if (v.isDisponible()) {
                 algunDisponible = true;
                 double eta = sistema.calcularETA(v.getNodoActual(), usuario.getNodoOrigen());
-                if (Double.isFinite(eta)) {
-                    algunAlcanzable = true;
-                    break;
-                }
+                if (Double.isFinite(eta)) { algunAlcanzable = true; break; }
             }
         }
-
         if (algunDisponible && !algunAlcanzable) {
             sistema.removerUsuario(usuario);
             lblInfo.setText("El usuario " + usuario.getId() + " es inaccesible.\nFue eliminado del mapa.");
@@ -242,10 +264,48 @@ public class DashboardController {
             return;
         }
 
+        // Caso 1: usuario sin vehículo asignado → abrir ColaDespacho
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(
+                    "/group20tup/matchingengine/fxml/ColaDespacho.fxml"));
+            Parent root = loader.load();
+            colaDespachoCtrl = loader.getController();
+
+            String[][] datos = sistema.getCandidatosDespacho(usuario);
+            List<ColaDespachoController.CandidatoCola> candidatos = new java.util.ArrayList<>();
+            for (String[] fila : datos) {
+                candidatos.add(new ColaDespachoController.CandidatoCola(
+                        fila[0],
+                        Double.parseDouble(fila[1]),
+                        Double.parseDouble(fila[2]),
+                        Double.parseDouble(fila[3])));
+            }
+            colaDespachoCtrl.setCandidatos(candidatos);
+
+            Stage owner = (Stage) mapaCanvas.getScene().getWindow();
+            Stage ventana = new Stage();
+            ventana.setScene(new Scene(root));
+            ventana.setTitle("Cola de despacho");
+            ventana.initOwner(owner);
+            ventana.initModality(Modality.NONE);
+            ventana.setResizable(true);
+            ventana.setWidth(340);
+            ventana.setHeight(400);
+            ventana.setX(owner.getX() + (owner.getWidth() - 340) / 2);
+            ventana.setY(owner.getY() + owner.getHeight() * 0.25);
+            colaDespachoCtrl.setStage(ventana);
+            ventanaColaDespachoActiva = ventana;
+            ventana.show();
+        } catch (Exception ex) {
+            System.err.println("ERROR al abrir ColaDespacho: " + ex.getMessage());
+            ex.printStackTrace();
+        }
+
         this.usuarioDespachando = usuario;
         lblInfo.setText("Buscando conductor...\n(0/" + sistema.getTotalCandidatosDespacho() + ")");
         pausaDespacho.play();
     }
+    
 
     /**
      * Procesa el siguiente candidato en el despacho asincronico.
@@ -260,27 +320,53 @@ public class DashboardController {
         Vehiculo aceptado = sistema.procesarSiguienteDespacho();
 
         if (aceptado != null) {
+            // Accepted: close window, show confirmation
+            if (ventanaColaDespachoActiva != null) {
+                ventanaColaDespachoActiva.close();
+                ventanaColaDespachoActiva = null;
+            }
+            colaDespachoCtrl = null;
+
             lblColaDespacho.setText("");
             double eta = sistema.calcularETA(aceptado.getNodoActual(), usuarioDespachando.getNodoOrigen());
             double distanciaKm = eta * GrafoMapa.VELOCIDAD_PROMEDIO_M_S / 1000.0;
             double tarifa = sistema.calcularTarifa(eta);
 
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Viaje asignado");
-            alert.setHeaderText("El vehiculo se dirige hacia el usuario");
-            alert.setContentText(String.format(
-                    "Vehiculo: %s\nETA: %.0f segundos\nDistancia: %.2f km\nTarifa: $%.2f",
-                    aceptado.getPatente(), eta, distanciaKm, tarifa));
-            alert.show();
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource(
+                        "/group20tup/matchingengine/fxml/VehiculoSolicitado.fxml"));
+                Parent root = loader.load();
+
+                VehiculoSolicitadoController ctrl = loader.getController();
+                ctrl.setDatos(aceptado.getPatente(), eta, distanciaKm, tarifa);
+
+                ventanaVehiculoSolicitadoActiva = mostrarVentana(root, "Viaje asignado", 360, 230);
+                ctrl.setStage(ventanaVehiculoSolicitadoActiva);
+            } catch (Exception ex) {
+                System.err.println("ERROR al abrir VehiculoSolicitado: " + ex.getMessage());
+                ex.printStackTrace();
+            }
 
             lblInfo.setText(String.format(
                     "Viaje asignado\nVehiculo: %s\nETA: %.0f s\nDist: %.2f km\nTarifa: $%.2f",
                     aceptado.getPatente(), eta, distanciaKm, tarifa));
         } else if (sistema.hayDespachoActivo()) {
+            // Rejected: animate removal, keep window open
+            String patente = sistema.getUltimoPatenteProcesado();
+            if (ventanaColaDespachoActiva != null && ventanaColaDespachoActiva.isShowing()
+                    && colaDespachoCtrl != null) {
+                colaDespachoCtrl.eliminarVehiculoConAnimacion(patente);
+            }
             lblInfo.setText("Buscando conductor...\n(%d/%d)".formatted(proc, total));
             lblColaDespacho.setText(sistema.obtenerTextoColaDespachoRestante());
             pausaDespacho.playFromStart();
         } else {
+            // Exhausted: close window
+            if (ventanaColaDespachoActiva != null) {
+                ventanaColaDespachoActiva.close();
+                ventanaColaDespachoActiva = null;
+            }
+            colaDespachoCtrl = null;
             lblColaDespacho.setText("");
             lblInfo.setText("No hay vehiculos disponibles\npara el usuario " + usuarioDespachando.getId() + ".");
         }
@@ -294,54 +380,85 @@ public class DashboardController {
      * @param v Vehiculo a inspeccionar
      */
     private void mostrarInfoVehiculo(Vehiculo v) {
-        MetadataNodo nodo = (MetadataNodo) grafoMapa.getListaEsquinas().devolver(v.getNodoActual());
+    MetadataNodo nodo = (MetadataNodo) grafoMapa.getListaEsquinas().devolver(v.getNodoActual());
 
-        if (v.getEstado() == EstadoVehiculo.DISPONIBLE) {
-            // ── Actualiza el panel lateral ──────────────────────────────────
-            lblInfo.setText(String.format(
-                    "Vehiculo: %s\nEstado: DISPONIBLE\nPosicion: nodo %d\nUbicacion: %s",
-                    v.getPatente(), v.getNodoActual(), nodo.getNombreEsquina()));
-            lblBusyQueue.setText("");
+    if (v.getEstado() == EstadoVehiculo.DISPONIBLE) {
+        // ── Actualiza el panel lateral ──────────────────────────────────
+        lblInfo.setText(String.format(
+                "Vehiculo: %s\nEstado: DISPONIBLE\nPosicion: nodo %d\nUbicacion: %s",
+                v.getPatente(), v.getNodoActual(), nodo.getNombreEsquina()));
+        lblBusyQueue.setText("");
 
-            // ── Abre la ventana flotante ────────────────────────────────────
-            try {
-                if (ventanaVehiculoActiva != null) {
-                    ventanaVehiculoActiva.cerrar();
-                    ventanaVehiculoActiva = null;
+        // ── Abre la ventana flotante ────────────────────────────────────
+        try {
+            if (ventanaVehiculoActiva != null) {
+                ventanaVehiculoActiva.cerrar();
+                ventanaVehiculoActiva = null;
+            }
+
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(
+                    "/group20tup/matchingengine/fxml/vehiculoDisponible.fxml"));
+            Parent root = loader.load();
+
+            VehiculoDisponibleController ctrl = loader.getController();
+            ctrl.setDatos(v.getPatente(), v.getEstado().name(), v.getNodoActual(), nodo.getNombreEsquina());
+
+            Stage ventana = mostrarVentana(root, "Vehículo disponible", 350, 160);
+            ctrl.setStage(ventana);
+            ventanaVehiculoActiva = ctrl;
+        } catch (Exception ex) {
+            System.err.println("ERROR al abrir ventana: " + ex.getMessage());
+            ex.printStackTrace();
+        }
+    } else {
+        lblInfo.setText(String.format(
+                "Vehiculo: %s\nEstado: %s\nPosicion: nodo %d\nUbicacion: %s",
+                v.getPatente(), v.getEstado(), v.getNodoActual(), nodo.getNombreEsquina()));
+        lblBusyQueue.setText(sistema.obtenerTextoColaOcupados());
+
+        if (ventanaVehiculosOcupadosActiva != null && ventanaVehiculosOcupadosActiva.isShowing()) {
+            return;
+        }
+
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(
+                    "/group20tup/matchingengine/fxml/ListaVehiculosOcupados.fxml"));
+            Parent root = loader.load();
+            ListaVehiculosOcupadosController ctrl = loader.getController();
+
+            List<ListaVehiculosOcupadosController.VehiculoOcupadoItem> items = new java.util.ArrayList<>();
+            for (int i = 0; i < sistema.totalVehiculos(); i++) {
+                Vehiculo cand = sistema.getVehiculo(i);
+                if (cand.getEstado() != EstadoVehiculo.DISPONIBLE) {
+                    MetadataNodo nodoC = (MetadataNodo) grafoMapa.getListaEsquinas().devolver(cand.getNodoActual());
+                    items.add(new ListaVehiculosOcupadosController.VehiculoOcupadoItem(
+                            cand.getPatente(),
+                            cand.getEstado().name(),
+                            cand.getNodoActual(),
+                            nodoC.getNombreEsquina()));
                 }
+            }
+            ctrl.setVehiculos(items);
 
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/group20tup/matchingengine/fxml/vehiculoDisponible.fxml"));
-                Parent root = loader.load();
-
-                VehiculoDisponibleController ctrl = loader.getController();
-                ctrl.setDatos(v.getPatente(), v.getEstado().name(), v.getNodoActual(), nodo.getNombreEsquina());
-
-                Stage ventana = mostrarVentana(root, "Vehículo disponible", 350, 160);
-                ctrl.setStage(ventana);
-                ventanaVehiculoActiva = ctrl;
-            } catch (Exception ex) { 
-                System.err.println("ERROR al abrir ventana: " + ex.getMessage());
-                ex.printStackTrace();}
-            } else {
-            // ── Actualiza el panel lateral ──────────────────────────────────
-            lblInfo.setText(String.format(
-                    "Vehiculo: %s\nEstado: %s\nPosicion: nodo %d\nUbicacion: %s",
-                    v.getPatente(), v.getEstado(), v.getNodoActual(), nodo.getNombreEsquina()));
-            lblBusyQueue.setText(sistema.obtenerTextoColaOcupados());
-            // ── Abre la ventana flotante ────────────────────────────────────
-           /*try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource(
-                    "/group20tup/matchingengine/fxml/ventana-vehiculo-ocupado.fxml"));
-                Parent root = loader.load();
-
-                VentanaVehiculoOcupadoController ctrl = loader.getController();
-                ctrl.setDatos(v.getPatente(), v.getEstado().toString(),
-                            v.getNodoActual(), nodo.getNombreEsquina(),
-                            sistema.obtenerTextoColaOcupados());
-                mostrarVentana(root, "Vehículo ocupado", 00, 00); //revisar para que quede centrada borde inferior
-            } catch (Exception ex) {ex.printStackTrace();}*/
+            Stage owner = (Stage) mapaCanvas.getScene().getWindow();
+            ventanaVehiculosOcupadosActiva = new Stage();
+            ventanaVehiculosOcupadosActiva.setScene(new javafx.scene.Scene(root));
+            ventanaVehiculosOcupadosActiva.setTitle("Vehículos ocupados");
+            ventanaVehiculosOcupadosActiva.initOwner(owner);
+            ventanaVehiculosOcupadosActiva.initModality(javafx.stage.Modality.NONE);
+            ventanaVehiculosOcupadosActiva.setResizable(true);
+            ventanaVehiculosOcupadosActiva.setWidth(360);
+            ventanaVehiculosOcupadosActiva.setHeight(400);
+            ventanaVehiculosOcupadosActiva.setX(owner.getX() + (owner.getWidth() - 360) / 2);
+            ventanaVehiculosOcupadosActiva.setY(owner.getY() + owner.getHeight() * 0.25);
+            ctrl.setStage(ventanaVehiculosOcupadosActiva);
+            ventanaVehiculosOcupadosActiva.show();
+        } catch (Exception ex) {
+            System.err.println("ERROR al abrir ListaVehiculosOcupados: " + ex.getMessage());
+            ex.printStackTrace();
         }
     }
+}
 
     /**
      * Método para crear las ventanas para mostrar en pantalla la información
@@ -508,6 +625,11 @@ public class DashboardController {
         renderizadorMapa = new MapCanvas(mapaCanvas, mapa, proyeccion);
         renderizadorMapa.inicializar();
 
+        btnToggleMapa.setOnAction(evt -> {
+        boolean activo = renderizadorMapa.toggleCapaFondo();
+        btnToggleMapa.setText(activo ? "🗺 Mapa OSM" : "⬜ Mapa OSM");
+        });
+
         btnResetView.setOnAction(evt -> {
             proyeccion.resetView();
             renderizadorMapa.redibujar();
@@ -543,14 +665,13 @@ public class DashboardController {
         mapaCanvas.setOnMouseDragged(DashboardController.this::onMouseDragged);
         mapaCanvas.setOnMouseClicked(DashboardController.this::onCanvasClick);
         mapaCanvas.setOnScroll(DashboardController.this::onScroll);
-        //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<INGRESO LISTENER PARA CERRAR VENTANA VEHICULO
+
         mapaCanvas.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
-        if (ventanaVehiculoActiva != null) {
-            ventanaVehiculoActiva.cerrar();
-            ventanaVehiculoActiva = null;
-        }
+            if (ventanaVehiculoActiva != null) {
+                ventanaVehiculoActiva.cerrar();
+                ventanaVehiculoActiva = null;
+            }
         });
-        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     }
 
     private void construirSidePanel() {
@@ -674,7 +795,7 @@ public class DashboardController {
     }
 
     private void agregarWidthListener(javafx.scene.Scene scene) {
-        scene.widthProperty().addListener(crearWidthListener());
+       scene.widthProperty().addListener(crearWidthListener());
     }
 
     /**

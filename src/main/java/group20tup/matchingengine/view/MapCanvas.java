@@ -28,19 +28,24 @@ import javafx.scene.text.TextAlignment;
  * @version 2.0
  */
 public class MapCanvas {
+    private javafx.scene.image.Image imagenUsuario;
+    private javafx.scene.image.Image imagenVDisponible;
+    private javafx.scene.image.Image imagenVAproximando;
+    private javafx.scene.image.Image imagenVEnViaje;
     private final Canvas canvas;
     private final GrafoMapa grafo;
     private final ProyeccionMapa proyeccion;
     private int[][] aristas;
+    private CapaFondoOSM capaFondo;
+    private boolean capaFondoActiva = true;
 
-    private static final double NODO_RADIO = 2.5;
     private static final double RUTA_NODO_RADIO = 4.0;
     private static final double VEHICULO_RADIO = 6.0;
     private static final double USUARIO_RADIO = 5.0;
     private static final double PADDING = 30.0;
 
-    private static final double ANCHO_CALLE_CONTORNO = 5.0;
-    private static final double ANCHO_CALLE_RELLENO = 2.5;
+    private static final double ANCHO_CALLE_CONTORNO = 1.5;
+    private static final double ANCHO_CALLE_RELLENO = 0.7;
 
     /**
      * Construye el renderizador asociado al canvas, grafo y proyeccion dados.
@@ -52,7 +57,26 @@ public class MapCanvas {
         this.canvas = canvas;
         this.grafo = grafo;
         this.proyeccion = proyeccion;
-    }
+        this.capaFondo = new CapaFondoOSM(canvas, proyeccion);
+        try {
+            imagenUsuario = new javafx.scene.image.Image(
+                getClass().getResourceAsStream(
+                "/group20tup/matchingengine/images/Usuario.png"));
+        } catch (Exception e) {
+            System.err.println("MapCanvas: no se pudo cargar Usuario.png");
+        }
+
+        try {
+        imagenVDisponible  = new javafx.scene.image.Image(
+            getClass().getResourceAsStream("/group20tup/matchingengine/images/VDisponible.png"));
+        imagenVAproximando = new javafx.scene.image.Image(
+            getClass().getResourceAsStream("/group20tup/matchingengine/images/VAproximando.png"));
+        imagenVEnViaje     = new javafx.scene.image.Image(
+            getClass().getResourceAsStream("/group20tup/matchingengine/images/VEnViaje.png"));
+        } catch (Exception e) {
+            System.err.println("MapCanvas: no se pudieron cargar imágenes de vehículos");
+        }
+    } 
 
     /**
      * Precalcula el listado de aristas (calles) existentes en el grafo.
@@ -134,10 +158,13 @@ public class MapCanvas {
         double tx = rect[0], ty = rect[1], tw = rect[2], th = rect[3];
 
         GraphicsContext gc = canvas.getGraphicsContext2D();
-        gc.clearRect(0, 0, w, h);
+        
+        if (capaFondoActiva) {
+                capaFondo.dibujar();
+        } else { gc.clearRect(0, 0, w, h);}  // fondo negro/transparente
+            
 
         dibujarAristas(gc, tx, ty, tw, th);
-        dibujarNodos(gc, tx, ty, tw, th);
     }
 
     /**
@@ -162,18 +189,6 @@ public class MapCanvas {
             double[] p1 = proyectarNodo(arista[0], tx, ty, tw, th);
             double[] p2 = proyectarNodo(arista[1], tx, ty, tw, th);
             gc.strokeLine(p1[0], p1[1], p2[0], p2[1]);
-        }
-    }
-
-    /**
-     * Dibuja los nodos del grafo como circulos azules (intersecciones).
-     */
-    private void dibujarNodos(GraphicsContext gc, double tx, double ty, double tw, double th) {
-        gc.setFill(Color.rgb(74, 144, 217, 0.7));
-        for (int i = 0; i < grafo.getOrden(); i++) {
-            double[] p = proyectarNodo(i, tx, ty, tw, th);
-            gc.fillOval(p[0] - NODO_RADIO, p[1] - NODO_RADIO,
-                    NODO_RADIO * 2, NODO_RADIO * 2);
         }
     }
 
@@ -266,35 +281,71 @@ public class MapCanvas {
             double[] p = proyectarInterpolado(v, tx, ty, tw, th);
 
             boolean destacado = v.getDestacadoHasta() > System.nanoTime();
-            double radio = destacado ? VEHICULO_RADIO * 1.6 : VEHICULO_RADIO;
+            double size = (destacado ? VEHICULO_RADIO * 1.6 : VEHICULO_RADIO) * 2.5;
 
-            Color color;
-            if (destacado) {
-                color = Color.GOLD;
-            } else if (v.getEstado() == EstadoVehiculo.DISPONIBLE) {
-                color = Color.LIMEGREEN;
-            } else if (v.getEstado() == EstadoVehiculo.APROXIMANDO) {
-                color = Color.ORANGE;
+        // Calcular ángulo de rotación según dirección de movimiento
+            double angulo = calcularAngulo(v, tx, ty, tw, th);
+
+        // Seleccionar imagen según estado
+            javafx.scene.image.Image img = imagenSegunEstado(v.getEstado());
+
+            if (img != null && !img.isError()) {
+                gc.save();
+                gc.translate(p[0], p[1]);
+                gc.rotate(angulo);
+                gc.drawImage(img, -size / 2, -size / 2, size, size);
+                gc.restore();
             } else {
-                color = Color.RED;
+                // Fallback al círculo original
+                Color color = v.getEstado() == EstadoVehiculo.DISPONIBLE ? Color.LIMEGREEN
+                            : v.getEstado() == EstadoVehiculo.APROXIMANDO ? Color.ORANGE
+                            : Color.RED;
+                if (destacado) color = Color.GOLD;
+                double radio = destacado ? VEHICULO_RADIO * 1.6 : VEHICULO_RADIO;
+                gc.setFill(color);
+                gc.fillOval(p[0] - radio, p[1] - radio, radio * 2, radio * 2);
+                gc.setStroke(Color.color(0.15, 0.15, 0.15));
+                gc.setLineWidth(destacado ? 2.5 : 1.5);
+                gc.strokeOval(p[0] - radio, p[1] - radio, radio * 2, radio * 2);
             }
 
-            gc.setFill(color);
-            gc.fillOval(p[0] - radio, p[1] - radio,
-                    radio * 2, radio * 2);
-            gc.setStroke(Color.color(0.15, 0.15, 0.15));
-            gc.setLineWidth(destacado ? 2.5 : 1.5);
-            gc.strokeOval(p[0] - radio, p[1] - radio,
-                    radio * 2, radio * 2);
-
-            gc.setFont(Font.font("monospace", 10));
-            gc.setTextAlign(TextAlignment.CENTER);
+            // Etiqueta con la patente
+            gc.setFont(javafx.scene.text.Font.font("monospace", 10));
+            gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
             gc.setStroke(Color.rgb(30, 30, 30));
             gc.setLineWidth(1.5);
-            gc.strokeText(v.getPatente(), p[0], p[1] - radio - 3);
+            gc.strokeText(v.getPatente(), p[0], p[1] - size / 2 - 3);
             gc.setFill(Color.WHITE);
-            gc.fillText(v.getPatente(), p[0], p[1] - radio - 3);
-            gc.setTextAlign(TextAlignment.LEFT);
+            gc.fillText(v.getPatente(), p[0], p[1] - size / 2 - 3);
+            gc.setTextAlign(javafx.scene.text.TextAlignment.LEFT);
+        }
+    }
+
+    private javafx.scene.image.Image imagenSegunEstado(EstadoVehiculo estado) {
+        return switch (estado) {
+            case DISPONIBLE  -> imagenVDisponible;
+            case APROXIMANDO -> imagenVAproximando;
+            case EN_VIAJE    -> imagenVEnViaje;
+            };
+    }
+
+    private double calcularAngulo(Vehiculo v, double tx, double ty, double tw, double th) {
+            double[] pAnt = proyectarNodo(v.getNodoAnterior(), tx, ty, tw, th);
+            double[] pAct = proyectarNodo(v.getNodoActual(),   tx, ty, tw, th);
+
+            double dx = pAct[0] - pAnt[0];
+            double dy = pAct[1] - pAnt[1];
+
+            // Sin movimiento → mantener 0°
+            if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) return 0;
+
+            // Determinar dirección predominante
+            if (Math.abs(dx) > Math.abs(dy)) {
+                // Movimiento horizontal
+                return dx > 0 ? 90 : 270; // derecha→90°, izquierda→270°
+            } else {
+                // Movimiento vertical
+                return dy > 0 ? 180 : 0;  // abajo→180°, arriba→0°
         }
     }
 
@@ -329,13 +380,18 @@ public class MapCanvas {
             Usuario u = (Usuario) usuarios.devolver(i);
             double[] p = proyectarNodo(u.getNodoOrigen(), tx, ty, tw, th);
 
-            gc.setFill(Color.MEDIUMVIOLETRED);
-            gc.fillOval(p[0] - USUARIO_RADIO, p[1] - USUARIO_RADIO,
-                    USUARIO_RADIO * 2, USUARIO_RADIO * 2);
-            gc.setStroke(Color.color(0.15, 0.15, 0.15));
-            gc.setLineWidth(1.5);
-            gc.strokeOval(p[0] - USUARIO_RADIO, p[1] - USUARIO_RADIO,
-                    USUARIO_RADIO * 2, USUARIO_RADIO * 2);
+            if (imagenUsuario != null && !imagenUsuario.isError()) {
+                double size = USUARIO_RADIO * 4;
+                gc.drawImage(imagenUsuario, p[0] - size / 2, p[1] - size / 2, size, size);
+            } else {
+                gc.setFill(Color.MEDIUMVIOLETRED);
+                gc.fillOval(p[0] - USUARIO_RADIO, p[1] - USUARIO_RADIO,
+                        USUARIO_RADIO * 2, USUARIO_RADIO * 2);
+                gc.setStroke(Color.color(0.15, 0.15, 0.15));
+                gc.setLineWidth(1.5);
+                gc.strokeOval(p[0] - USUARIO_RADIO, p[1] - USUARIO_RADIO,
+                        USUARIO_RADIO * 2, USUARIO_RADIO * 2);
+            }
         }
     }
 
@@ -364,6 +420,15 @@ public class MapCanvas {
             }
         }
         return null;
+    }
+    
+    /**
+     * Boton activar y desactivar CapaFondo
+     */
+
+    public boolean toggleCapaFondo() {
+    capaFondoActiva = !capaFondoActiva;
+    return capaFondoActiva;
     }
 
     /**

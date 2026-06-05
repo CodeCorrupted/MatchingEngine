@@ -41,6 +41,7 @@ public class SistemaViajes {
     private boolean despachoEnCurso;
     private int totalCandidatos;
     private int candidatosProcesados;
+    private String ultimoPatenteProcesado;
     private Random rndDespacho;
     private Usuario usuarioDespachando;
 
@@ -181,6 +182,14 @@ public class SistemaViajes {
     }
 
     /**
+     * Devuelve la patente del ultimo candidato procesado en el despacho.
+     * @return Patente del vehiculo procesado, o {@code null} si no hay
+     */
+    public String getUltimoPatenteProcesado() {
+        return ultimoPatenteProcesado;
+    }
+
+    /**
      * Inicia un proceso de despacho asincronico para un usuario.
      * <p>
      *     Crea la cola de prioridad con los vehiculos disponibles ordenados
@@ -202,6 +211,7 @@ public class SistemaViajes {
         despachoEnCurso = true;
         totalCandidatos = colaDespachoActiva.tamanio();
         candidatosProcesados = 0;
+        ultimoPatenteProcesado = null;
         this.rndDespacho = rnd;
         this.usuarioDespachando = usuario;
     }
@@ -226,6 +236,7 @@ public class SistemaViajes {
 
         String patente = colaDespachoActiva.extraerMinPatente();
         candidatosProcesados++;
+        this.ultimoPatenteProcesado = patente;
 
         Vehiculo candidato = buscarVehiculoPorPatente(patente);
         if (candidato == null || !candidato.isDisponible()) {
@@ -260,6 +271,7 @@ public class SistemaViajes {
         this.rndDespacho = null;
         this.usuarioDespachando = null;
         this.colaDespachoActiva = null;
+        this.ultimoPatenteProcesado = null;
     }
 
     /**
@@ -313,6 +325,33 @@ public class SistemaViajes {
         return sb.toString();
     }
 
+    /**
+     * Devuelve los candidatos de despacho como array de String[][].
+     * Cada fila contiene: [patente, eta, distKm, tarifa].
+     * Ordenados por ETA ascendente (menor primero).
+     * @param usuario Usuario solicitante
+     * @return Array con los datos de cada candidato disponible
+     */
+    public String[][] getCandidatosDespacho(Usuario usuario) {
+        ColaPrioridadMonticulo cola = construirColaDespacho(usuario);
+        int n = cola.tamanio();
+        String[][] resultado = new String[n][4];
+        int i = 0;
+        while (!cola.estaVacia()) {
+            String patente = cola.extraerMinPatente();
+            Vehiculo v = buscarVehiculoPorPatente(patente);
+            if (v == null) continue;
+            double eta    = calcularETA(v.getNodoActual(), usuario.getNodoOrigen());
+            double distKm = eta * GrafoMapa.VELOCIDAD_PROMEDIO_M_S / 1000.0;
+            double tarifa = calcularTarifa(eta);
+            resultado[i][0] = patente;
+            resultado[i][1] = String.valueOf(eta);
+            resultado[i][2] = String.valueOf(distKm);
+            resultado[i][3] = String.valueOf(tarifa);
+            i++;
+        }
+        return resultado;
+    }
     /**
      * Genera el texto formateado de los candidatos restantes en la cola de
      * despacho activa, excluyendo los vehiculos que ya fueron procesados

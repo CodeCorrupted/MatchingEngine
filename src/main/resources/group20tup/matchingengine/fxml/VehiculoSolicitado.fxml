@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox xmlns="http://javafx.com/javafx/26"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="group20tup.matchingengine.controller.VehiculoSolicitadoController"
+      prefWidth="340"
+      style="-fx-background-color: white; -fx-border-color: #cccccc; -fx-border-width: 1;">
+
+   <!-- Header: mensaje principal + icono info -->
+   <HBox alignment="CENTER_LEFT"
+         spacing="10"
+         style="-fx-padding: 12 15 12 15;">
+      <Label text="El vehículo se dirige hacia el usuario"
+             wrapText="true"
+             HBox.hgrow="ALWAYS">
+         <font><Font name="Calibri Bold" size="14.0" /></font>
+      </Label>
+      <ImageView fitHeight="24.0" fitWidth="24.0"
+                 pickOnBounds="true" preserveRatio="true">
+         <image><Image url="@../images/Usuario.png" /></image>
+      </ImageView>
+   </HBox>
+
+   <Separator />
+
+   <!-- Top black bar: patente -->
+   <HBox style="-fx-background-color: black; -fx-padding: 3 5;">
+      <Label alignment="CENTER_RIGHT" 
+             text="VEHICULO PATENTE :  " 
+             textFill="WHITE">
+         <font><Font name="Calibri Bold" size="12.0" /></font>
+      </Label>
+      <Label fx:id="vehiculoPatenteCatch" 
+             maxWidth="Infinity" 
+             text="" textFill="WHITE">
+         <font><Font name="Calibri Bold" 
+                     size="12.0" /></font>
+      </Label>
+      
+   </HBox>
+
+   <!-- Middle section: image + estado/posicion -->
+   <HBox spacing="10" 
+         style="-fx-padding: 5;">
+      <ImageView fx:id="vehiculoImageView" 
+                 fitHeight="39.0" 
+                 fitWidth="82.0" 
+                 pickOnBounds="true" 
+                 preserveRatio="true">
+         <image><Image url="@../images/Vehiculo.png" /></image>
+      </ImageView>
+      <VBox spacing="3" 
+            HBox.hgrow="ALWAYS">
+         <HBox>
+            <Label text=" ETA : ">
+               <font><Font name="Calibri Bold" size="15.0" /></font>
+            </Label>
+            <Label fx:id="ETALabel" 
+                   maxWidth="Infinity" 
+                   text="">
+               <font><Font name="Calibri Bold" size="15.0" /></font>
+            </Label>
+         </HBox>
+         <Separator />
+         <HBox>
+            <Label alignment="CENTER" text="DISTANCIA :">
+               <font><Font name="Calibri Bold" size="15.0" /></font>
+            </Label>
+            <Label fx:id="distanciaCatch" maxWidth="Infinity" text="">
+               <font><Font name="Calibri Bold" size="15.0" /></font>
+            </Label>
+         </HBox>
+      </VBox>
+   </HBox>
+
+   <!-- Bottom grey bar: tarifa -->
+   <HBox style="-fx-background-color: grey; -fx-padding: 3 5;">
+      <Label alignment="CENTER" text="Tarifa Plana : $" textFill="WHITE">
+         <font><Font name="Calibri Bold" size="12.0" /></font>
+      </Label>
+      <Label fx:id="tarifaCatch" maxWidth="230" text="" textFill="WHITE" wrapText="true">
+         <font><Font name="Calibri Bold" size="12.0" /></font>
+      </Label>
+   </HBox>
+
+   <!-- Footer: botón Aceptar -->
+   <HBox alignment="CENTER_RIGHT" style="-fx-padding: 8 12 8 12;">
+      <Region HBox.hgrow="ALWAYS" />
+      <Button fx:id="btnAceptar"
+              text="Aceptar"
+              onAction="#onAceptar"
+              style="-fx-background-color: #0078d7; -fx-text-fill: white; -fx-padding: 4 18;">
+         <font><Font name="Calibri" size="12.0" /></font>
+      </Button>
+   </HBox>
+
+</VBox>

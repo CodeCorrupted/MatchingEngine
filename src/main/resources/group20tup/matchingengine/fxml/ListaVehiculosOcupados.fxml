@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox xmlns="http://javafx.com/javafx/26"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="group20tup.matchingengine.controller.ListaVehiculosOcupadosController"
+      prefWidth="360"
+      style="-fx-background-color: white; -fx-border-color: #cccccc; -fx-border-width: 1;">
+
+   <!-- Header -->
+   <HBox style="-fx-background-color: #222222; -fx-padding: 6 10;">
+      <Label text="— Vehículos Ocupados —" textFill="WHITE">
+         <font><Font name="Calibri Bold" size="13.0" /></font>
+      </Label>
+   </HBox>
+
+   <ScrollPane fitToWidth="true" prefHeight="350.0"
+               hbarPolicy="NEVER"
+               style="-fx-background-color: transparent; -fx-border-width: 0;">
+      <VBox fx:id="listaVehiculos" spacing="0" />
+   </ScrollPane>
+
+</VBox>

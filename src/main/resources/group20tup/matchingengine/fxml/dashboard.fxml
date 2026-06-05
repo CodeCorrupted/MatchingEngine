@@ -30,6 +30,7 @@
             <ProgressIndicator fx:id="floydProgress" visible="false" />
             <Label fx:id="lblFloydStatus" wrapText="true" styleClass="floyd-status" />
             <Button fx:id="btnResetView" text="Reset View" />
+            <Button fx:id="btnToggleMapa" text="🗺 Mapa OSM" />
             <Label text="Simulacion" styleClass="section-title" />
             <HBox spacing="6">
                 <Button fx:id="btnPausar" text="⏸ Pausar" HBox.hgrow="ALWAYS" maxWidth="99999" />

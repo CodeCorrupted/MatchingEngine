@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox xmlns="http://javafx.com/javafx/26"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="group20tup.matchingengine.controller.VehiculoOcupadoLController"
+      prefWidth="320"
+      style="-fx-background-color: white; -fx-border-color: #cccccc; -fx-border-width: 0 0 1 0;">
+
+   <!-- Top black bar: patente + estado -->
+   <HBox style="-fx-background-color: black; -fx-padding: 3 5;">
+      <Label text="VEHICULO :  " textFill="WHITE">
+         <font><Font name="Calibri Bold" size="12.0" /></font>
+      </Label>
+      <Label fx:id="patenteCatch" maxWidth="Infinity" text="" textFill="WHITE" HBox.hgrow="ALWAYS">
+         <font><Font name="Calibri Bold" size="12.0" /></font>
+      </Label>
+      <Label fx:id="estadoCatch" text="" textFill="YELLOW">
+         <font><Font name="Calibri Bold" size="11.0" /></font>
+      </Label>
+   </HBox>
+
+   <!-- Middle: imagen + posicion + ubicacion -->
+   <HBox spacing="10" style="-fx-padding: 5;">
+      <ImageView fitHeight="39.0" fitWidth="82.0"
+                 pickOnBounds="true" preserveRatio="true">
+         <image><Image url="@../images/Vehiculo.png" /></image>
+      </ImageView>
+      <VBox spacing="3" HBox.hgrow="ALWAYS">
+         <HBox>
+            <Label text=" Posicion : ">
+               <font><Font name="Calibri Bold" size="12.0" /></font>
+            </Label>
+            <Label fx:id="posicionCatch" maxWidth="Infinity" text="">
+               <font><Font name="Calibri" size="12.0" /></font>
+            </Label>
+         </HBox>
+         <Separator />
+         <HBox>
+            <Label text=" Ubicacion : ">
+               <font><Font name="Calibri Bold" size="12.0" /></font>
+            </Label>
+            <Label fx:id="ubicacionCatch" maxWidth="Infinity" text="" wrapText="true">
+               <font><Font name="Calibri" size="12.0" /></font>
+            </Label>
+         </HBox>
+      </VBox>
+   </HBox>
+
+</VBox>
