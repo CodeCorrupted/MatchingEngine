@@ -79,6 +79,12 @@ public class ProyeccionMapa {
      * @return Arreglo de dos doubles {x, y} con las coordenadas de pantalla
      */
     public double[] proyectar(double lat, double lon, double targetX, double targetY, double targetW, double targetH) {
+        double[] out = new double[2];
+        proyectar(lat, lon, targetX, targetY, targetW, targetH, out);
+        return out;
+    }
+
+    public void proyectar(double lat, double lon, double targetX, double targetY, double targetW, double targetH, double[] out) {
         double rangoLat = maxLat - minLat;
         double rangoLon = maxLon - minLon;
         if (rangoLat == 0) rangoLat = 1;
@@ -86,9 +92,8 @@ public class ProyeccionMapa {
 
         double x = (lon - minLon) / rangoLon * targetW + targetX;
         double y = (maxLat - lat) / rangoLat * targetH + targetY;
-        x = x * zoom + panX;
-        y = y * zoom + panY;
-        return new double[]{x, y};
+        out[0] = x * zoom + panX;
+        out[1] = y * zoom + panY;
     }
 
     /**

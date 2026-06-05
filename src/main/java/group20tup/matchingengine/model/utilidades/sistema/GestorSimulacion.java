@@ -47,6 +47,7 @@ public class GestorSimulacion implements MotorSimulacion {
     private int contadorUsuarios;
     private int contadorVehiculos;
     private int[] nodosValidos;
+    private int[][] vecinosPorNodo;
 
     public boolean esNodoOcupado(int nodo) {
         for (int i = 0; i < sistema.totalVehiculos(); i++) {
@@ -86,6 +87,7 @@ public class GestorSimulacion implements MotorSimulacion {
         this.contadorUsuarios = 0;
         this.contadorVehiculos = 0;
         this.nodosValidos = precomputarNodosValidos();
+        this.vecinosPorNodo = precomputarVecinos();
     }
 
     /**
@@ -126,6 +128,32 @@ public class GestorSimulacion implements MotorSimulacion {
     private int obtenerNodoValidoAleatorio() {
         if (nodosValidos.length == 0) return -1;
         return nodosValidos[rnd.nextInt(nodosValidos.length)];
+    }
+
+    /**
+     * Precomputa la lista de vecinos (nodos adyacentes) para cada nodo del grafo.
+     * @return Arreglo jagged donde result[nodo] es un arreglo con indices de vecinos
+     */
+    private int[][] precomputarVecinos() {
+        MatrizGrafo matriz = grafo.getMatrizCosto();
+        int orden = grafo.getOrden();
+        int[][] result = new int[orden][];
+        for (int i = 0; i < orden; i++) {
+            int count = 0;
+            for (int j = 0; j < orden; j++) {
+                if (i != j && matriz.areConnected(i, j)) {
+                    count++;
+                }
+            }
+            result[i] = new int[count];
+            int idx = 0;
+            for (int j = 0; j < orden; j++) {
+                if (i != j && matriz.areConnected(i, j)) {
+                    result[i][idx++] = j;
+                }
+            }
+        }
+        return result;
     }
 
     /**
@@ -230,23 +258,9 @@ public class GestorSimulacion implements MotorSimulacion {
      * @return Indice de un nodo vecino valido, o -1 si no existe ninguna arista saliente
      */
     private int obtenerVecinoAleatorio(int nodo) {
-        int orden = grafo.getOrden();
-        MatrizGrafo matriz = grafo.getMatrizCosto();
-        int count = 0;
-        for (int j = 0; j < orden; j++) {
-            if (j != nodo && matriz.areConnected(nodo, j)) {
-                count++;
-            }
-        }
-        if (count == 0) return -1;
-        int target = rnd.nextInt(count);
-        for (int j = 0; j < orden; j++) {
-            if (j != nodo && matriz.areConnected(nodo, j)) {
-                if (target == 0) return j;
-                target--;
-            }
-        }
-        return -1;
+        int[] vecinos = vecinosPorNodo[nodo];
+        if (vecinos.length == 0) return -1;
+        return vecinos[rnd.nextInt(vecinos.length)];
     }
 
     /**

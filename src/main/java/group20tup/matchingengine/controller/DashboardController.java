@@ -3,22 +3,18 @@ package group20tup.matchingengine.controller;
 import group20tup.matchingengine.Main;
 import group20tup.matchingengine.model.estructuras.nolineales.grafos.GrafoMapa;
 import group20tup.matchingengine.model.recursos.MetadataNodo;
-import group20tup.matchingengine.model.recursos.simulacion.EstadoVehiculo;
 import group20tup.matchingengine.model.recursos.simulacion.Usuario;
 import group20tup.matchingengine.model.recursos.simulacion.Vehiculo;
 import group20tup.matchingengine.model.utilidades.CalculadorRutas;
 import group20tup.matchingengine.model.utilidades.calculadorescaminos.DijkstraRutas;
 import group20tup.matchingengine.model.utilidades.calculadorescaminos.FloydWarshallRutas;
-import group20tup.matchingengine.model.utilidades.sistema.EstadisticasSimulacion;
 import group20tup.matchingengine.model.utilidades.sistema.GestorSimulacion;
 import group20tup.matchingengine.model.utilidades.sistema.SistemaViajes;
 import group20tup.matchingengine.view.MapCanvas;
-import group20tup.matchingengine.controller.ColaDespachoController;
 import group20tup.matchingengine.view.ProyeccionMapa;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -28,33 +24,24 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.animation.KeyFrame;
-import javafx.animation.PauseTransition;
-import javafx.animation.Timeline;
-import javafx.util.Duration;
 
-import java.util.List;
 import java.util.Random;
 
 /**
  * Controlador de la interfaz principal del simulador de flota de vehiculos.
  * <p>
- *     Inicializa el grafo vial de la ciudad, la proyeccion geografica y el
- *     renderizador del mapa al cargar la vista. Crea el sistema de viajes
- *     con el algoritmo Dijkstra y el gestor de simulacion que orquesta el
- *     movimiento autonomo de vehiculos, la densidad de entidades y el ciclo
- *     de vida de los viajes. Gestiona los eventos de redimension del canvas
- *     y la actualizacion de la escena cuando la ventana se hace visible.
+ *     Inicializa el grafo vial, la proyeccion, el renderizador y los
+ *     sub-controladores especializados (CanvasMapHandler, DispatchFlowController,
+ *     SidePanelManager). Coordina la interaccion entre ellos y mantiene
+ *     la configuracion global (algoritmo de ruteo, precarga de Floyd-Warshall).
  * </p>
  * @author Ivan
  * @version 2.0
@@ -101,14 +88,6 @@ public class DashboardController {
     @FXML
     private Button btnEliminarVehiculos;
 
-    private boolean modoColocarUsuario = false;
-    private VehiculoDisponibleController ventanaVehiculoActiva = null;
-    private Stage ventanaVehiculoSolicitadoActiva = null;
-    private Stage ventanaVehiculosOcupadosActiva = null;
-    private Stage ventanaColaDespachoActiva = null;
-    private ColaDespachoController colaDespachoCtrl;
-    private Stage ventanaEliminarVehiculoActiva = null;
-
     private GrafoMapa grafoMapa;
     private ProyeccionMapa proyeccion;
     private MapCanvas renderizadorMapa;
@@ -117,498 +96,17 @@ public class DashboardController {
     private CalculadorRutas dijkstraRuteador;
     private volatile CalculadorRutas floydRuteador;
     private volatile boolean floydListo = false;
-    private Label lblInfo;
-    private Label lblBusyQueue;
-    private Label lblColaDespacho;
-    private Label lblStats;
     private SimulacionFXAdapter adaptadorSimulacion;
     private final Random rnd = new Random();
-    private PauseTransition pausaDespacho;
-    private Usuario usuarioDespachando;
-    private double mouseX;
-    private double mouseY;
-    private boolean dragging;
-    private long ultimoRenderDrag;
 
-    /**
-     * Captura la posicion inicial del mouse al presionar el boton.
-     * Se usa para detectar arrastres y diferenciar clics de drags.
-     * @param e Evento de presion del mouse
-     */
-    private void onMousePressed(MouseEvent e) {
-        mouseX = e.getX();
-        mouseY = e.getY();
-        dragging = false;
-        ultimoRenderDrag = 0;
-    }
+    private CanvasMapHandler canvasHandler;
+    private DispatchFlowController dispatchFlow;
+    private SidePanelManager sidePanelMgr;
+    private Label lblInfo;
+    private Label lblColaDespacho;
+    private Label lblBusyQueue;
+    private Label lblStats;
 
-    /**
-     * Desplaza la proyeccion del mapa arrastrando el canvas con el mouse.
-     * El renderizado se actualiza con un throttle de 30ms para evitar
-     * re-renderizados excesivos durante el arrastre.
-     * @param e Evento de arrastre del mouse
-     */
-    private void onMouseDragged(MouseEvent e) {
-        double dx = e.getX() - mouseX;
-        double dy = e.getY() - mouseY;
-        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
-            dragging = true;
-        }
-        proyeccion.pan(dx, dy);
-        mouseX = e.getX();
-        mouseY = e.getY();
-        long now = System.nanoTime();
-        if (gestor != null && now - ultimoRenderDrag > 30_000_000) {
-            gestor.renderizarFrame();
-            ultimoRenderDrag = now;
-        }
-    }
-
-    /**
-     * Maneja los clics sobre el canvas del mapa.
-     * Detecta si el clic fue sobre un usuario (inicia solicitud de viaje)
-     * o sobre un vehiculo (muestra informacion del estado). Ignora clics
-     * que ocurren inmediatamente despues de un arrastre.
-     * @param e Evento de clic del mouse
-     */
-    private void onCanvasClick(MouseEvent e) {
-        if (dragging) return;
-
-        double x = e.getX(), y = e.getY();
-
-        if (modoColocarUsuario) {
-            boolean usuarioLimitado = !gestor.puedeAgregarUsuarios(1);
-            if (usuarioLimitado) {
-                mostrarAlerta("Limite alcanzado",
-                    "No se pueden agregar mas usuarios.\nLimite: " + GestorSimulacion.getLimiteUsuarios());
-                return;
-            }
-            int nodo = renderizadorMapa.hitTestNodo(x, y);
-            if (nodo == -1) return;
-
-            if (gestor.esNodoOcupado(nodo)) {
-                mostrarAlerta("Nodo ocupado", "Este nodo esta ocupado. Seleccione un nodo vacio.");
-                return;
-            }
-
-            renderizadorMapa.setNodoResaltado(nodo);
-            gestor.renderizarFrame();
-
-            MetadataNodo md = (MetadataNodo) grafoMapa.getListaEsquinas().devolver(nodo);
-            boolean ok = mostrarDialogo(javafx.scene.control.Alert.AlertType.CONFIRMATION,
-                    "Colocar usuario", "Colocar usuario en este nodo?",
-                    "Nodo " + nodo + "\n" + md.getNombreEsquina(), true);
-            if (ok) {
-                gestor.crearUsuarioEnNodo(nodo);
-            }
-            renderizadorMapa.clearNodoResaltado();
-            gestor.renderizarFrame();
-            return;
-        }
-
-        Usuario usuario = renderizadorMapa.hitTestUsuario(x, y, sistema.getListaUsuarios());
-        if (usuario != null) {
-            solicitarViajeUI(usuario);
-            return;
-        }
-
-        Vehiculo vehiculo = renderizadorMapa.hitTestVehiculo(x, y, sistema.getListaVehiculos());
-        if (vehiculo != null) {
-            mostrarInfoVehiculo(vehiculo);
-        }
-    }
-
-    /**
-     * Aplica zoom a la proyeccion del mapa usando la rueda del mouse.
-     * El factor de zoom es 1.1x por cada paso hacia arriba y 0.91x (1/1.1)
-     * por cada paso hacia abajo. El zoom se centra en la posicion del cursor.
-     * @param e Evento de scroll del mouse
-     */
-    private void onScroll(ScrollEvent e) {
-        double dy = e.getDeltaY();
-        if (dy == 0) return;
-        double factor = dy > 0 ? 1.1 : 1.0 / 1.1;
-        proyeccion.zoom(factor, e.getX(), e.getY());
-        if (gestor != null) gestor.renderizarFrame();
-        e.consume();
-    }
-
-    /**
-     * Procesa la solicitud de viaje de un usuario desde la interfaz grafica.
-     * Verifica disponibilidad y alcanzabilidad de vehiculos, y si es posible
-     * inicia un proceso de despacho asincronico con demora simulada entre
-     * candidatos. Si el usuario es inalcanzable lo elimina del mapa.
-     * @param usuario Usuario que solicita el viaje
-     */
-    private void solicitarViajeUI(Usuario usuario) {
-        // Caso 3: usuario ya tiene vehículo APROXIMANDO
-        for (int i = 0; i < sistema.totalVehiculos(); i++) {
-            Vehiculo v = sistema.getVehiculo(i);
-            if (v.getEstado() == EstadoVehiculo.APROXIMANDO
-                    && v.getPasajeroAbordo() != null
-                    && v.getPasajeroAbordo().equals(usuario)) {
-                // Si la ventana ya está abierta, no hacer nada
-                if (ventanaVehiculoSolicitadoActiva != null && ventanaVehiculoSolicitadoActiva.isShowing()) {
-                    return;
-                }
-                // Si está cerrada, reabrirla
-                double eta    = sistema.calcularETA(v.getNodoActual(), usuario.getNodoOrigen());
-                double distKm = eta * GrafoMapa.VELOCIDAD_PROMEDIO_M_S / 1000.0;
-                double tarifa = sistema.calcularTarifa(eta);
-                try {
-                    FXMLLoader loader = new FXMLLoader(getClass().getResource(
-                            "/group20tup/matchingengine/fxml/VehiculoSolicitado.fxml"));
-                    Parent root = loader.load();
-                    VehiculoSolicitadoController ctrl = loader.getController();
-                    ctrl.setDatos(v.getPatente(), eta, distKm, tarifa);
-                    ventanaVehiculoSolicitadoActiva = mostrarVentana(root, "Viaje asignado", 360, 230);
-                    ctrl.setStage(ventanaVehiculoSolicitadoActiva);
-                } catch (Exception ex) {
-                    System.err.println("ERROR al abrir VehiculoSolicitado: " + ex.getMessage());
-                    ex.printStackTrace();
-                }
-                lblInfo.setText(String.format(
-                        "Vehiculo: %s\nEstado: %s\nPosicion: nodo %d\nUbicacion: %s",
-                        v.getPatente(), v.getEstado(), v.getNodoActual(),
-                        ((MetadataNodo) grafoMapa.getListaEsquinas().devolver(v.getNodoActual())).getNombreEsquina()));
-                return;
-            }
-        }
-
-        // Caso: despacho ya en curso para este usuario
-        if (sistema.hayDespachoActivo() && usuario.equals(this.usuarioDespachando)) {
-            lblInfo.setText("Buscando conductor...\n("
-                    + sistema.getCandidatosProcesadosDespacho() + "/"
-                    + sistema.getTotalCandidatosDespacho() + ")");
-            return;
-        }   
-
-        if (ventanaColaDespachoActiva != null) {
-            ventanaColaDespachoActiva.close();
-            ventanaColaDespachoActiva = null;
-        }
-        colaDespachoCtrl = null;
-
-        if (pausaDespacho != null) pausaDespacho.stop();
-        sistema.cancelarDespacho();
-
-        boolean algunDisponible = false;
-        boolean algunAlcanzable = false;
-        for (int i = 0; i < sistema.totalVehiculos(); i++) {
-            Vehiculo v = sistema.getVehiculo(i);
-            if (v.isDisponible()) {
-                algunDisponible = true;
-                double eta = sistema.calcularETA(v.getNodoActual(), usuario.getNodoOrigen());
-                if (Double.isFinite(eta)) { algunAlcanzable = true; break; }
-            }
-        }
-        if (algunDisponible && !algunAlcanzable) {
-            sistema.removerUsuario(usuario);
-            lblInfo.setText("El usuario " + usuario.getId() + " es inaccesible.\nFue eliminado del mapa.");
-            return;
-        }
-
-        String colaTexto = sistema.obtenerTextoColaDespacho(usuario);
-        lblColaDespacho.setText(colaTexto);
-
-        sistema.iniciarDespacho(usuario, rnd);
-        if (sistema.getTotalCandidatosDespacho() == 0) {
-            lblInfo.setText("No hay vehiculos disponibles\npara el usuario " + usuario.getId() + ".");
-            return;
-        }
-
-        // Caso 1: usuario sin vehículo asignado → abrir ColaDespacho
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(
-                    "/group20tup/matchingengine/fxml/ColaDespacho.fxml"));
-            Parent root = loader.load();
-            colaDespachoCtrl = loader.getController();
-
-            String[][] datos = sistema.getCandidatosDespacho(usuario);
-            List<ColaDespachoController.CandidatoCola> candidatos = new java.util.ArrayList<>();
-            for (String[] fila : datos) {
-                candidatos.add(new ColaDespachoController.CandidatoCola(
-                        fila[0],
-                        Double.parseDouble(fila[1]),
-                        Double.parseDouble(fila[2]),
-                        Double.parseDouble(fila[3])));
-            }
-            colaDespachoCtrl.setCandidatos(candidatos);
-
-            Stage owner = (Stage) mapaCanvas.getScene().getWindow();
-            Stage ventana = new Stage();
-            ventana.setScene(new Scene(root));
-            ventana.setTitle("Cola de despacho");
-            ventana.initOwner(owner);
-            ventana.initModality(Modality.NONE);
-            ventana.setResizable(true);
-            ventana.setWidth(340);
-            ventana.setHeight(400);
-            ventana.setX(owner.getX() + (owner.getWidth() - 340) / 2);
-            ventana.setY(owner.getY() + owner.getHeight() * 0.25);
-            colaDespachoCtrl.setStage(ventana);
-            ventanaColaDespachoActiva = ventana;
-            ventana.show();
-        } catch (Exception ex) {
-            System.err.println("ERROR al abrir ColaDespacho: " + ex.getMessage());
-            ex.printStackTrace();
-        }
-
-        this.usuarioDespachando = usuario;
-        lblInfo.setText("Buscando conductor...\n(0/" + sistema.getTotalCandidatosDespacho() + ")");
-        pausaDespacho.play();
-    }
-    
-
-    /**
-     * Procesa el siguiente candidato en el despacho asincronico.
-     * Se ejecuta tras cada pausa de 1500ms. Si el vehiculo acepta muestra
-     * el dialogo de confirmacion; si rechaza y hay mas candidatos reinicia
-     * la pausa; si se agotaron los candidatos informa que no hay disponibles.
-     */
-    private void procesarSiguienteDespacho() {
-        int proc = sistema.getCandidatosProcesadosDespacho();
-        int total = sistema.getTotalCandidatosDespacho();
-
-        Vehiculo aceptado = sistema.procesarSiguienteDespacho();
-
-        if (aceptado != null) {
-            // Accepted: close window, show confirmation
-            if (ventanaColaDespachoActiva != null) {
-                ventanaColaDespachoActiva.close();
-                ventanaColaDespachoActiva = null;
-            }
-            colaDespachoCtrl = null;
-
-            lblColaDespacho.setText("");
-            double eta = sistema.calcularETA(aceptado.getNodoActual(), usuarioDespachando.getNodoOrigen());
-            double distanciaKm = eta * GrafoMapa.VELOCIDAD_PROMEDIO_M_S / 1000.0;
-            double tarifa = sistema.calcularTarifa(eta);
-
-            try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource(
-                        "/group20tup/matchingengine/fxml/VehiculoSolicitado.fxml"));
-                Parent root = loader.load();
-
-                VehiculoSolicitadoController ctrl = loader.getController();
-                ctrl.setDatos(aceptado.getPatente(), eta, distanciaKm, tarifa);
-
-                ventanaVehiculoSolicitadoActiva = mostrarVentana(root, "Viaje asignado", 360, 230);
-                ctrl.setStage(ventanaVehiculoSolicitadoActiva);
-            } catch (Exception ex) {
-                System.err.println("ERROR al abrir VehiculoSolicitado: " + ex.getMessage());
-                ex.printStackTrace();
-            }
-
-            lblInfo.setText(String.format(
-                    "Viaje asignado\nVehiculo: %s\nETA: %.0f s\nDist: %.2f km\nTarifa: $%.2f",
-                    aceptado.getPatente(), eta, distanciaKm, tarifa));
-        } else if (sistema.hayDespachoActivo()) {
-            // Rejected: animate removal, keep window open
-            String patente = sistema.getUltimoPatenteProcesado();
-            if (ventanaColaDespachoActiva != null && ventanaColaDespachoActiva.isShowing()
-                    && colaDespachoCtrl != null) {
-                colaDespachoCtrl.eliminarVehiculoConAnimacion(patente);
-            }
-            lblInfo.setText("Buscando conductor...\n(%d/%d)".formatted(proc, total));
-            lblColaDespacho.setText(sistema.obtenerTextoColaDespachoRestante());
-            pausaDespacho.playFromStart();
-        } else {
-            // Exhausted: close window
-            if (ventanaColaDespachoActiva != null) {
-                ventanaColaDespachoActiva.close();
-                ventanaColaDespachoActiva = null;
-            }
-            colaDespachoCtrl = null;
-            lblColaDespacho.setText("");
-            lblInfo.setText("No hay vehiculos disponibles\npara el usuario " + usuarioDespachando.getId() + ".");
-        }
-    }
-
-    /**
-     * Muestra en el panel lateral la informacion de un vehiculo seleccionado.
-     * Si el vehiculo esta DISPONIBLE muestra telemetria basica (patente, estado,
-     * posicion, ubicacion). Si esta ocupado muestra la cola de vehiculos
-     * ocupados ordenada por tiempo restante ascendente.
-     * @param v Vehiculo a inspeccionar
-     */
-    private void mostrarInfoVehiculo(Vehiculo v) {
-    MetadataNodo nodo = (MetadataNodo) grafoMapa.getListaEsquinas().devolver(v.getNodoActual());
-
-    if (v.getEstado() == EstadoVehiculo.DISPONIBLE) {
-        // ── Actualiza el panel lateral ──────────────────────────────────
-        lblInfo.setText(String.format(
-                "Vehiculo: %s\nEstado: DISPONIBLE\nPosicion: nodo %d\nUbicacion: %s",
-                v.getPatente(), v.getNodoActual(), nodo.getNombreEsquina()));
-        lblBusyQueue.setText("");
-
-        // ── Abre la ventana flotante ────────────────────────────────────
-        try {
-            if (ventanaVehiculoActiva != null) {
-                ventanaVehiculoActiva.cerrar();
-                ventanaVehiculoActiva = null;
-            }
-
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(
-                    "/group20tup/matchingengine/fxml/vehiculoDisponible.fxml"));
-            Parent root = loader.load();
-
-            VehiculoDisponibleController ctrl = loader.getController();
-            ctrl.setDatos(v.getPatente(), v.getEstado().name(), v.getNodoActual(), nodo.getNombreEsquina());
-
-            Stage ventana = mostrarVentana(root, "Vehículo disponible", 350, 160);
-            ctrl.setStage(ventana);
-            ventanaVehiculoActiva = ctrl;
-        } catch (Exception ex) {
-            System.err.println("ERROR al abrir ventana: " + ex.getMessage());
-            ex.printStackTrace();
-        }
-    } else {
-        lblInfo.setText(String.format(
-                "Vehiculo: %s\nEstado: %s\nPosicion: nodo %d\nUbicacion: %s",
-                v.getPatente(), v.getEstado(), v.getNodoActual(), nodo.getNombreEsquina()));
-        lblBusyQueue.setText(sistema.obtenerTextoColaOcupados());
-
-        if (ventanaVehiculosOcupadosActiva != null && ventanaVehiculosOcupadosActiva.isShowing()) {
-            return;
-        }
-
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(
-                    "/group20tup/matchingengine/fxml/ListaVehiculosOcupados.fxml"));
-            Parent root = loader.load();
-            ListaVehiculosOcupadosController ctrl = loader.getController();
-
-            List<ListaVehiculosOcupadosController.VehiculoOcupadoItem> items = new java.util.ArrayList<>();
-            for (int i = 0; i < sistema.totalVehiculos(); i++) {
-                Vehiculo cand = sistema.getVehiculo(i);
-                if (cand.getEstado() != EstadoVehiculo.DISPONIBLE) {
-                    MetadataNodo nodoC = (MetadataNodo) grafoMapa.getListaEsquinas().devolver(cand.getNodoActual());
-                    items.add(new ListaVehiculosOcupadosController.VehiculoOcupadoItem(
-                            cand.getPatente(),
-                            cand.getEstado().name(),
-                            cand.getNodoActual(),
-                            nodoC.getNombreEsquina()));
-                }
-            }
-            ctrl.setVehiculos(items);
-
-            Stage owner = (Stage) mapaCanvas.getScene().getWindow();
-            ventanaVehiculosOcupadosActiva = new Stage();
-            ventanaVehiculosOcupadosActiva.setScene(new javafx.scene.Scene(root));
-            ventanaVehiculosOcupadosActiva.setTitle("Vehículos ocupados");
-            ventanaVehiculosOcupadosActiva.initOwner(owner);
-            ventanaVehiculosOcupadosActiva.initModality(javafx.stage.Modality.NONE);
-            ventanaVehiculosOcupadosActiva.setResizable(true);
-            ventanaVehiculosOcupadosActiva.setWidth(360);
-            ventanaVehiculosOcupadosActiva.setHeight(400);
-            ventanaVehiculosOcupadosActiva.setX(owner.getX() + (owner.getWidth() - 360) / 2);
-            ventanaVehiculosOcupadosActiva.setY(owner.getY() + owner.getHeight() * 0.25);
-            ctrl.setStage(ventanaVehiculosOcupadosActiva);
-            ventanaVehiculosOcupadosActiva.show();
-        } catch (Exception ex) {
-            System.err.println("ERROR al abrir ListaVehiculosOcupados: " + ex.getMessage());
-            ex.printStackTrace();
-        }
-    }
-}
-
-    /**
-     * Método para crear las ventanas para mostrar en pantalla la información
-     * de los vehículos y la Lista de los vehículos ocupados
-     */
-
-    private Stage mostrarVentana(Parent root, String titulo, double width, double height) {
-        Stage ventana = new Stage();
-        ventana.setScene(new Scene(root));
-        ventana.setTitle(titulo);
-        ventana.initOwner(mapaCanvas.getScene().getWindow());
-        ventana.initModality(Modality.NONE);
-        ventana.setResizable(false);
-        ventana.setWidth(width);
-        ventana.setHeight(height);
-
-        Stage owner = (Stage) mapaCanvas.getScene().getWindow();
-        ventana.setX(owner.getX() + (owner.getWidth()  - width)  / 2);
-        ventana.setY(owner.getY() + (owner.getHeight() - height));
-
-        ventana.show();
-        return ventana; // ← agregá esto
-    }
-
-    /**
-     * Lanza un hilo en segundo plano para precomputar todas las rutas
-     * con Floyd-Warshall. Mientras se ejecuta, el selector de algoritmo
-     * se deshabilita y se muestra un indicador de progreso. Al finalizar,
-     * se habilita el selector y se marca Floyd como listo.
-     */
-    private void precomputarFloydEnBackground() {
-        floydProgress.setVisible(true);
-        lblFloydStatus.setText("Precomputando Floyd-Warshall...");
-        algoritmoSelector.setDisable(true);
-
-        Task<Void> floydTask = new Task<>() {
-            @Override
-            protected Void call() {
-                floydRuteador = new FloydWarshallRutas(grafoMapa);
-                return null;
-            }
-        };
-
-        floydTask.setOnSucceeded(e -> {
-            floydListo = true;
-            floydProgress.setVisible(false);
-            lblFloydStatus.setText("Floyd-Warshall listo");
-            algoritmoSelector.setDisable(false);
-        });
-
-        floydTask.setOnFailed(e -> {
-            floydProgress.setVisible(false);
-            lblFloydStatus.setText("Error precomputando Floyd-Warshall");
-            algoritmoSelector.setDisable(false);
-            System.err.println("Error en Floyd-Warshall: " + floydTask.getException().getMessage());
-        });
-
-        new Thread(floydTask).start();
-    }
-
-    /**
-     * Cambia el algoritmo de ruteo activo en el sistema y el gestor.
-     * Si se selecciona Floyd-Warshall y aun no esta precomputado,
-     * muestra un alerta y mantiene Dijkstra como activo.
-     * @param algoritmo Nombre del algoritmo seleccionado ("Dijkstra" o "Floyd-Warshall")
-     */
-    private void onAlgoritmoCambiado(String algoritmo) {
-        if ("Floyd-Warshall".equals(algoritmo)) {
-            if (floydListo) {
-                sistema.setRuteador(floydRuteador);
-                gestor.setRuteador(floydRuteador);
-                lblInfo.setText("Algoritmo cambiado a Floyd-Warshall");
-            } else {
-                algoritmoSelector.setValue("Dijkstra");
-                mostrarDialogo(javafx.scene.control.Alert.AlertType.INFORMATION,
-                        "Precomputando", "Floyd-Warshall se esta precomputando",
-                        "Espere a que termine el calculo inicial...", false);
-            }
-        } else {
-            sistema.setRuteador(dijkstraRuteador);
-            gestor.setRuteador(dijkstraRuteador);
-            lblInfo.setText("Algoritmo cambiado a Dijkstra");
-        }
-    }
-
-    /**
-     * Inicializa el controlador del panel principal.
-     * <p>
-     *     Configura todos los componentes de la interfaz: carga el grafo
-     *     desde los archivos CSV en segundo plano, inicializa la proyeccion
-     *     del mapa, el canvas de renderizado, la simulacion con sus
-     *     entidades (vehiculos y usuarios), los controles de simulacion
-     *     (pausa, velocidad) y los manejadores de eventos del canvas
-     *     (click, arrastre, scroll). Este metodo es invocado
-     *     automaticamente por JavaFX tras cargar el FXML.
-     * </p>
-     */
     @FXML
     public void initialize() {
         if (Main.preloadedGrafo != null) {
@@ -666,8 +164,8 @@ public class DashboardController {
             precomputarFloydEnBackground();
         }
         configurarCanvas();
-        construirSidePanel();
-        iniciarTimelineEstadisticas();
+        sidePanelMgr.construir();
+        sidePanelMgr.iniciarTimelineEstadisticas();
         configurarEscena();
     }
 
@@ -676,22 +174,26 @@ public class DashboardController {
         renderizadorMapa = new MapCanvas(mapaCanvas, mapa, proyeccion);
         renderizadorMapa.inicializar();
 
-        btnToggleMapa.setOnAction(evt -> {
-        boolean activo = renderizadorMapa.toggleCapaFondo();
-        btnToggleMapa.setText(activo ? "🗺 Mapa OSM" : "⬜ Mapa OSM");
-        });
-
-        btnResetView.setOnAction(evt -> {
-            proyeccion.resetView();
-            renderizadorMapa.redibujar();
-        });
-
         dijkstraRuteador = new DijkstraRutas(mapa);
         sistema = new SistemaViajes(mapa, dijkstraRuteador);
         gestor = new GestorSimulacion(sistema, renderizadorMapa, mapa, dijkstraRuteador);
 
-        pausaDespacho = new PauseTransition(Duration.millis(1500));
-        pausaDespacho.setOnFinished(evt -> procesarSiguienteDespacho());
+        lblInfo = new Label("Haga clic en un usuario\npara solicitar un viaje,\no en un vehiculo para\nver su informacion.");
+        lblColaDespacho = new Label("");
+        lblBusyQueue = new Label("");
+        lblStats = new Label("(aun sin datos)");
+
+        canvasHandler = new CanvasMapHandler(mapaCanvas, proyeccion, gestor);
+        dispatchFlow = new DispatchFlowController(sistema, gestor, mapa, renderizadorMapa,
+                rnd, lblInfo, lblColaDespacho, mapaCanvas);
+        sidePanelMgr = new SidePanelManager(sidePanel, mapaCanvas, gestor, sistema,
+                mapa, proyeccion, renderizadorMapa,
+                lblInfo, lblColaDespacho, lblBusyQueue, lblStats,
+                txtCantidadVehiculos, btnAgregarVehiculos,
+                txtCantidadUsuarios, btnAgregarUsuarios,
+                lblVehicleCount, lblUserCount,
+                btnColocarUsuario, btnPausar, sliderVelocidad, lblVelocidad,
+                btnToggleMapa, btnResetView, dispatchFlow);
     }
 
     private void configurarSelectorAlgoritmo() {
@@ -700,6 +202,53 @@ public class DashboardController {
         algoritmoSelector.getSelectionModel().selectedItemProperty().addListener((obs, old, val) -> {
             if (val != null) onAlgoritmoCambiado(val);
         });
+    }
+
+    private void precomputarFloydEnBackground() {
+        floydProgress.setVisible(true);
+        lblFloydStatus.setText("Precomputando Floyd-Warshall...");
+        algoritmoSelector.setDisable(true);
+
+        Task<Void> floydTask = new Task<>() {
+            @Override
+            protected Void call() {
+                floydRuteador = new FloydWarshallRutas(grafoMapa);
+                return null;
+            }
+        };
+
+        floydTask.setOnSucceeded(e -> {
+            floydListo = true;
+            floydProgress.setVisible(false);
+            lblFloydStatus.setText("Floyd-Warshall listo");
+            algoritmoSelector.setDisable(false);
+        });
+
+        floydTask.setOnFailed(e -> {
+            floydProgress.setVisible(false);
+            lblFloydStatus.setText("Error precomputando Floyd-Warshall");
+            algoritmoSelector.setDisable(false);
+            System.err.println("Error en Floyd-Warshall: " + floydTask.getException().getMessage());
+        });
+
+        new Thread(floydTask).start();
+    }
+
+    private void onAlgoritmoCambiado(String algoritmo) {
+        if ("Floyd-Warshall".equals(algoritmo)) {
+            if (floydListo) {
+                sistema.setRuteador(floydRuteador);
+                gestor.setRuteador(floydRuteador);
+            } else {
+                algoritmoSelector.setValue("Dijkstra");
+                mostrarDialogo(Alert.AlertType.INFORMATION,
+                        "Precomputando", "Floyd-Warshall se esta precomputando",
+                        "Espere a que termine el calculo inicial...", false);
+            }
+        } else {
+            sistema.setRuteador(dijkstraRuteador);
+            gestor.setRuteador(dijkstraRuteador);
+        }
     }
 
     private void configurarCanvas() {
@@ -712,74 +261,61 @@ public class DashboardController {
             if (gestor != null) gestor.renderizarFrame();
         });
 
-        mapaCanvas.setOnMousePressed(DashboardController.this::onMousePressed);
-        mapaCanvas.setOnMouseDragged(DashboardController.this::onMouseDragged);
-        mapaCanvas.setOnMouseClicked(DashboardController.this::onCanvasClick);
-        mapaCanvas.setOnScroll(DashboardController.this::onScroll);
+        canvasHandler.configurarCanvas();
+        mapaCanvas.setOnMouseClicked(this::onCanvasClick);
 
         mapaCanvas.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
-            if (ventanaVehiculoActiva != null) {
-                ventanaVehiculoActiva.cerrar();
-                ventanaVehiculoActiva = null;
+            if (sidePanelMgr != null) {
+                sidePanelMgr.desactivarModoColocarUsuario();
             }
         });
     }
 
-    private void construirSidePanel() {
-        lblInfo = new Label("Haga clic en un usuario\npara solicitar un viaje,\no en un vehiculo para\nver su informacion.");
-        lblInfo.setWrapText(true);
-        lblInfo.getStyleClass().add("info-label");
+    private void onCanvasClick(MouseEvent e) {
+        if (canvasHandler.isDragging()) return;
 
-        lblColaDespacho = new Label("");
-        lblColaDespacho.setWrapText(true);
-        lblColaDespacho.getStyleClass().add("mono-label");
+        double x = e.getX(), y = e.getY();
 
-        lblBusyQueue = new Label("");
-        lblBusyQueue.setWrapText(true);
-        lblBusyQueue.getStyleClass().add("mono-label");
+        if (sidePanelMgr != null && sidePanelMgr.isModoColocarUsuario()) {
+            boolean usuarioLimitado = !gestor.puedeAgregarUsuarios(1);
+            if (usuarioLimitado) {
+                mostrarAlerta("Limite alcanzado",
+                    "No se pueden agregar mas usuarios.\nLimite: " + GestorSimulacion.getLimiteUsuarios());
+                return;
+            }
+            int nodo = renderizadorMapa.hitTestNodo(x, y);
+            if (nodo == -1) return;
 
-        ScrollPane infoScroll = new ScrollPane(lblInfo);
-        infoScroll.setFitToWidth(true);
-        infoScroll.setPrefHeight(100);
-        infoScroll.setMaxHeight(120);
-        infoScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        infoScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+            if (gestor.esNodoOcupado(nodo)) {
+                mostrarAlerta("Nodo ocupado", "Este nodo esta ocupado. Seleccione un nodo vacio.");
+                return;
+            }
 
-        ScrollPane colaScroll = new ScrollPane(lblColaDespacho);
-        colaScroll.setFitToWidth(true);
-        colaScroll.setPrefHeight(120);
-        colaScroll.setMaxHeight(200);
-        colaScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        colaScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+            renderizadorMapa.setNodoResaltado(nodo);
+            gestor.renderizarFrame();
 
-        ScrollPane busyScroll = new ScrollPane(lblBusyQueue);
-        busyScroll.setFitToWidth(true);
-        busyScroll.setPrefHeight(200);
-        busyScroll.setMaxHeight(250);
-        busyScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        busyScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+            MetadataNodo md = (MetadataNodo) grafoMapa.getListaEsquinas().devolver(nodo);
+            boolean ok = mostrarDialogo(Alert.AlertType.CONFIRMATION,
+                    "Colocar usuario", "Colocar usuario en este nodo?",
+                    "Nodo " + nodo + "\n" + md.getNombreEsquina(), true);
+            if (ok) {
+                gestor.crearUsuarioEnNodo(nodo);
+            }
+            renderizadorMapa.clearNodoResaltado();
+            gestor.renderizarFrame();
+            return;
+        }
 
-        sidePanel.getChildren().addAll(infoScroll, colaScroll, busyScroll);
+        Usuario usuario = renderizadorMapa.hitTestUsuario(x, y, sistema.getListaUsuarios());
+        if (usuario != null) {
+            dispatchFlow.solicitarViajeUI(usuario);
+            return;
+        }
 
-        Label sep = new Label("─────────────────");
-        sep.getStyleClass().add("separator-label");
-
-        Label lblStatsHeader = new Label("Estadisticas");
-        lblStatsHeader.getStyleClass().add("stats-header");
-
-        lblStats = new Label("(aun sin datos)");
-        lblStats.setWrapText(true);
-        lblStats.getStyleClass().add("stats-content");
-
-        sidePanel.getChildren().addAll(sep, lblStatsHeader, lblStats);
-    }
-
-    private void iniciarTimelineEstadisticas() {
-        Timeline statsTimer = new Timeline(
-            new KeyFrame(Duration.millis(500), evt -> actualizarEstadisticas())
-        );
-        statsTimer.setCycleCount(Timeline.INDEFINITE);
-        statsTimer.play();
+        Vehiculo vehiculo = renderizadorMapa.hitTestVehiculo(x, y, sistema.getListaVehiculos());
+        if (vehiculo != null) {
+            sidePanelMgr.mostrarInfoVehiculo(vehiculo);
+        }
     }
 
     private void configurarEscena() {
@@ -816,29 +352,12 @@ public class DashboardController {
         renderizadorMapa.redibujar();
         gestor.inicializarEntidades();
         adaptadorSimulacion = new SimulacionFXAdapter(gestor);
-        configurarControlesSimulacion();
+        sidePanelMgr.configurarControlesSimulacion(adaptadorSimulacion);
+
+        btnReiniciarSimulacion.setOnAction(evt -> sidePanelMgr.onReiniciarSimulacion());
+        btnEliminarVehiculos.setOnAction(evt -> sidePanelMgr.onEliminarVehiculo());
+
         adaptadorSimulacion.iniciar();
-    }
-
-    private void configurarControlesSimulacion() {
-        btnPausar.setOnAction(e -> {
-            boolean pausado = adaptadorSimulacion.togglePausa();
-            btnPausar.setText(pausado ? "\u25B6 Reanudar" : "\u23F8 Pausar");
-        });
-
-        sliderVelocidad.valueProperty().addListener((obs, old, val) -> {
-            double v = val.doubleValue();
-            adaptadorSimulacion.setVelocidad(v);
-            lblVelocidad.setText(String.format("%.1f\u00D7", v));
-        });
-
-        btnAgregarVehiculos.setOnAction(evt -> onAgregarVehiculos());
-
-        btnColocarUsuario.setOnAction(evt -> onColocarUsuario());
-        btnAgregarUsuarios.setOnAction(evt -> onAgregarUsuarios());
-
-        btnReiniciarSimulacion.setOnAction(evt -> onReiniciarSimulacion());
-        btnEliminarVehiculos.setOnAction(evt -> onEliminarVehiculo());
     }
 
     private javafx.beans.value.ChangeListener<Number> crearWidthListener() {
@@ -857,219 +376,25 @@ public class DashboardController {
        scene.widthProperty().addListener(crearWidthListener());
     }
 
-    /**
-     * Actualiza los labels de estadisticas en el panel lateral.
-     * Se ejecuta cada 500ms via Timeline. Lee los contadores del
-     * sistema de viajes y calcula la tasa de uso actual de la flota.
-     */
-    private void actualizarEstadisticas() {
-        if (sistema == null) return;
-        EstadisticasSimulacion e = sistema.getEstadisticas();
-
-        int ocupados = 0;
-        int total = sistema.totalVehiculos();
-        for (int i = 0; i < total; i++) {
-            if (sistema.getVehiculo(i).getEstado() != EstadoVehiculo.DISPONIBLE) {
-                ocupados++;
-            }
-        }
-
-        String texto = String.format(
-            "Solicitados: %d\n" +
-            "Completados: %d\n" +
-            "Rechazados: %d\n" +
-            "ETA prom: %.0fs\n" +
-            "Dist total: %.1f km\n" +
-            "Tarifa prom: $%.2f\n" +
-            "Uso: %d/%d (%.0f%%)\n" +
-            "Viajes/h: %.1f",
-            e.getViajesSolicitados(),
-            e.getViajesCompletados(),
-            e.getViajesRechazados(),
-            e.getETAPromedio(),
-            e.getSumaDistanciasKm(),
-            e.getTarifaPromedio(),
-            ocupados, total,
-            total > 0 ? ocupados * 100.0 / total : 0,
-            e.getViajesPorHora()
-        );
-        lblStats.setText(texto);
-        actualizarConteoVehiculos();
-        actualizarConteoUsuarios();
+    private Stage mostrarVentana(Parent root, String titulo, double width, double height) {
+        Stage owner = (Stage) mapaCanvas.getScene().getWindow();
+        Stage ventana = new Stage();
+        ventana.setScene(new Scene(root));
+        ventana.setTitle(titulo);
+        ventana.initOwner(owner);
+        ventana.initModality(Modality.NONE);
+        ventana.setResizable(false);
+        ventana.setWidth(width);
+        ventana.setHeight(height);
+        ventana.setX(owner.getX() + (owner.getWidth() - width) / 2);
+        ventana.setY(owner.getY() + (owner.getHeight() - height));
+        ventana.show();
+        return ventana;
     }
 
-    private void onAgregarVehiculos() {
-        String texto = txtCantidadVehiculos.getText().trim();
-        if (texto.isEmpty()) return;
-
-        int cantidad;
-        try {
-            cantidad = Integer.parseInt(texto);
-        } catch (NumberFormatException e) {
-            mostrarAlerta("Cantidad invalida", "Ingrese un numero entero positivo.");
-            return;
-        }
-
-        if (cantidad <= 0) {
-            mostrarAlerta("Cantidad invalida", "Ingrese un numero mayor a 0.");
-            return;
-        }
-
-        if (!gestor.puedeAgregarVehiculos(cantidad)) {
-            int disponibles = GestorSimulacion.getLimiteVehiculos() - sistema.totalVehiculos();
-            mostrarAlerta("Limite alcanzado",
-                "No se pueden agregar " + cantidad + " vehiculos.\n"
-                + "Limite: " + GestorSimulacion.getLimiteVehiculos() + " | "
-                + "Actuales: " + sistema.totalVehiculos() + " | "
-                + "Disponibles: " + disponibles);
-            return;
-        }
-
-        gestor.agregarVehiculos(cantidad);
-        txtCantidadVehiculos.clear();
-    }
-
-    private void actualizarConteoVehiculos() {
-        if (sistema == null) return;
-        lblVehicleCount.setText(sistema.totalVehiculos() + " / " + GestorSimulacion.getLimiteVehiculos());
-    }
-
-    private void onColocarUsuario() {
-        modoColocarUsuario = !modoColocarUsuario;
-        if (modoColocarUsuario) {
-            btnColocarUsuario.getStyleClass().add("active");
-            mapaCanvas.setCursor(javafx.scene.Cursor.CROSSHAIR);
-        } else {
-            btnColocarUsuario.getStyleClass().remove("active");
-            mapaCanvas.setCursor(javafx.scene.Cursor.DEFAULT);
-            renderizadorMapa.clearNodoResaltado();
-            if (gestor != null) gestor.renderizarFrame();
-        }
-    }
-
-    private void onAgregarUsuarios() {
-        String texto = txtCantidadUsuarios.getText().trim();
-        if (texto.isEmpty()) return;
-
-        int cantidad;
-        try {
-            cantidad = Integer.parseInt(texto);
-        } catch (NumberFormatException e) {
-            mostrarAlerta("Cantidad invalida", "Ingrese un numero entero positivo.");
-            return;
-        }
-
-        if (cantidad <= 0) {
-            mostrarAlerta("Cantidad invalida", "Ingrese un numero mayor a 0.");
-            return;
-        }
-
-        if (!gestor.puedeAgregarUsuarios(cantidad)) {
-            int disponibles = GestorSimulacion.getLimiteUsuarios() - sistema.totalUsuarios();
-            mostrarAlerta("Limite alcanzado",
-                "No se pueden agregar " + cantidad + " usuarios.\n"
-                + "Limite: " + GestorSimulacion.getLimiteUsuarios() + " | "
-                + "Actuales: " + sistema.totalUsuarios() + " | "
-                + "Disponibles: " + disponibles);
-            return;
-        }
-
-        gestor.agregarUsuarios(cantidad);
-        txtCantidadUsuarios.clear();
-    }
-
-    private void onReiniciarSimulacion() {
-        boolean ok = mostrarDialogo(javafx.scene.control.Alert.AlertType.CONFIRMATION,
-                "Reiniciar simulacion", null,
-                "Se eliminaran todos los vehiculos y usuarios actuales.\n"
-                + "La simulacion volvera a tener 10 vehiculos y 5 usuarios.\n"
-                + "¿Desea continuar?", true);
-        if (!ok) {
-            return;
-        }
-
-        adaptadorSimulacion.detener();
-
-        if (pausaDespacho != null) {
-            pausaDespacho.stop();
-        }
-
-        modoColocarUsuario = false;
-        mapaCanvas.setCursor(javafx.scene.Cursor.DEFAULT);
-
-        if (ventanaVehiculoActiva != null) {
-            ventanaVehiculoActiva.cerrar();
-            ventanaVehiculoActiva = null;
-        }
-        if (ventanaVehiculoSolicitadoActiva != null) {
-            ventanaVehiculoSolicitadoActiva.close();
-            ventanaVehiculoSolicitadoActiva = null;
-        }
-        if (ventanaVehiculosOcupadosActiva != null) {
-            ventanaVehiculosOcupadosActiva.close();
-            ventanaVehiculosOcupadosActiva = null;
-        }
-        if (ventanaColaDespachoActiva != null) {
-            ventanaColaDespachoActiva.close();
-            ventanaColaDespachoActiva = null;
-            colaDespachoCtrl = null;
-        }
-        if (ventanaEliminarVehiculoActiva != null) {
-            ventanaEliminarVehiculoActiva.close();
-            ventanaEliminarVehiculoActiva = null;
-        }
-
-        gestor.reiniciar();
-
-        btnPausar.setText("\u23F8 Pausar");
-        adaptadorSimulacion.reanudar();
-        adaptadorSimulacion.iniciar();
-        renderizadorMapa.redibujar();
-    }
-
-    private void onEliminarVehiculo() {
-        if (ventanaEliminarVehiculoActiva != null && ventanaEliminarVehiculoActiva.isShowing()) {
-            ventanaEliminarVehiculoActiva.requestFocus();
-            return;
-        }
-
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(
-                    "/group20tup/matchingengine/fxml/eliminarVehiculo.fxml"));
-            Parent root = loader.load();
-
-            EliminarVehiculoController ctrl = loader.getController();
-            ctrl.setDatos(gestor, sistema);
-
-            Stage ventana = mostrarVentana(root, "Eliminar Vehiculo", 380, 480);
-            ctrl.setStage(ventana);
-            ventanaEliminarVehiculoActiva = ventana;
-            ventana.setOnHidden(evt -> ventanaEliminarVehiculoActiva = null);
-        } catch (Exception ex) {
-            System.err.println("ERROR al abrir ventana Eliminar Vehiculo: " + ex.getMessage());
-            ex.printStackTrace();
-        }
-    }
-
-    private void actualizarConteoUsuarios() {
-        if (sistema == null) return;
-        lblUserCount.setText(sistema.totalUsuarios() + " / " + GestorSimulacion.getLimiteUsuarios());
-    }
-
-    /**
-     * Muestra un dialogo como ventana decorada (Stage) en lugar de un Alert
-     * de JavaFX, para evitar problemas con gestores de ventanas que
-     * colocan en modo tiling las ventanas UTILITY.
-     * @param tipo Tipo de dialogo (CONFIRMATION, WARNING, INFORMATION)
-     * @param titulo Titulo de la ventana
-     * @param header Texto del encabezado (null para omitirlo)
-     * @param mensaje Contenido del mensaje
-     * @param bloqueante true para showAndWait, false para show (no bloqueante)
-     * @return true si el usuario presiono Aceptar/OK, false si Cancelar
-     */
-    private boolean mostrarDialogo(javafx.scene.control.Alert.AlertType tipo,
-                                   String titulo, String header,
-                                   String mensaje, boolean bloqueante) {
+    private boolean mostrarDialogo(Alert.AlertType tipo,
+                                    String titulo, String header,
+                                    String mensaje, boolean bloqueante) {
         Stage owner = (Stage) mapaCanvas.getScene().getWindow();
         Stage dialogo = new Stage();
         dialogo.initModality(Modality.APPLICATION_MODAL);
@@ -1101,7 +426,7 @@ public class DashboardController {
         boolean[] resultado = { true };
 
         HBox botones = new HBox(10);
-        botones.setAlignment(javafx.geometry.Pos.CENTER);
+        botones.setAlignment(Pos.CENTER);
         botones.setStyle("-fx-padding: 6 14 12 14;");
 
         Button btnOK = new Button("Aceptar");
@@ -1111,7 +436,7 @@ public class DashboardController {
         btnOK.setOnAction(e -> { resultado[0] = true; dialogo.close(); });
         botones.getChildren().add(btnOK);
 
-        if (tipo == javafx.scene.control.Alert.AlertType.CONFIRMATION) {
+        if (tipo == Alert.AlertType.CONFIRMATION) {
             Button btnCancelar = new Button("Cancelar");
             btnCancelar.setStyle("-fx-padding: 6 20; -fx-font-size: 12px;");
             btnCancelar.setOnAction(e -> { resultado[0] = false; dialogo.close(); });
@@ -1138,6 +463,6 @@ public class DashboardController {
     }
 
     private void mostrarAlerta(String titulo, String mensaje) {
-        mostrarDialogo(javafx.scene.control.Alert.AlertType.WARNING, titulo, null, mensaje, true);
+        mostrarDialogo(Alert.AlertType.WARNING, titulo, null, mensaje, true);
     }
 }

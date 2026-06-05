@@ -40,6 +40,10 @@ public class MapCanvas {
     private boolean capaFondoActiva = true;
     private int nodoResaltado = -1;
 
+    private final double[] scratch0 = new double[2];
+    private final double[] scratch1 = new double[2];
+    private final double[] scratchRect = new double[4];
+
     private static final double RUTA_NODO_RADIO = 4.0;
     private static final double VEHICULO_RADIO = 6.0;
     private static final double USUARIO_RADIO = 5.0;
@@ -119,24 +123,27 @@ public class MapCanvas {
      * </p>
      * @param canvasW Ancho actual del canvas en pixeles
      * @param canvasH Alto actual del canvas en pixeles
-     * @return Arreglo de cuatro doubles {x, y, ancho, alto} con el rectangulo destino
+     * @param out Arreglo de salida de 4 doubles {x, y, ancho, alto}
      */
-    private double[] calcularRectDestino(double canvasW, double canvasH) {
-        return new double[]{PADDING, PADDING, canvasW - 2 * PADDING, canvasH - 2 * PADDING};
+    private void calcularRectDestino(double canvasW, double canvasH, double[] out) {
+        out[0] = PADDING;
+        out[1] = PADDING;
+        out[2] = canvasW - 2 * PADDING;
+        out[3] = canvasH - 2 * PADDING;
     }
 
     /**
-     * Proyecta un par de indices de nodos a sus coordenadas de pantalla.
+     * Proyecta un nodo a sus coordenadas de pantalla.
      * @param idx Indice del nodo en el grafo
      * @param tx Coordenada X del origen del rectangulo destino
      * @param ty Coordenada Y del origen del rectangulo destino
      * @param tw Ancho del rectangulo destino
      * @param th Alto del rectangulo destino
-     * @return Arreglo {x, y} con la posicion en pantalla del nodo
+     * @param out Arreglo de salida de 2 doubles {x, y}
      */
-    private double[] proyectarNodo(int idx, double tx, double ty, double tw, double th) {
+    private void proyectarNodo(int idx, double tx, double ty, double tw, double th, double[] out) {
         MetadataNodo nodo = (MetadataNodo) grafo.getListaEsquinas().devolver(idx);
-        return proyeccion.proyectar(nodo.getLatitud(), nodo.getLongitud(), tx, ty, tw, th);
+        proyeccion.proyectar(nodo.getLatitud(), nodo.getLongitud(), tx, ty, tw, th, out);
     }
 
     /**
@@ -155,8 +162,8 @@ public class MapCanvas {
         double h = canvas.getHeight();
         if (w <= 0 || h <= 0) return;
 
-        double[] rect = calcularRectDestino(w, h);
-        double tx = rect[0], ty = rect[1], tw = rect[2], th = rect[3];
+        calcularRectDestino(w, h, scratchRect);
+        double tx = scratchRect[0], ty = scratchRect[1], tw = scratchRect[2], th = scratchRect[3];
 
         GraphicsContext gc = canvas.getGraphicsContext2D();
         
@@ -168,12 +175,12 @@ public class MapCanvas {
         dibujarAristas(gc, tx, ty, tw, th);
 
         if (nodoResaltado >= 0) {
-            double[] p = proyectarNodo(nodoResaltado, tx, ty, tw, th);
+            proyectarNodo(nodoResaltado, tx, ty, tw, th, scratch0);
             gc.setFill(Color.rgb(255, 215, 0, 0.35));
             gc.setStroke(Color.rgb(255, 215, 0, 0.9));
             gc.setLineWidth(3.0);
-            gc.fillOval(p[0] - 16, p[1] - 16, 32, 32);
-            gc.strokeOval(p[0] - 16, p[1] - 16, 32, 32);
+            gc.fillOval(scratch0[0] - 16, scratch0[1] - 16, 32, 32);
+            gc.strokeOval(scratch0[0] - 16, scratch0[1] - 16, 32, 32);
         }
     }
 
@@ -188,17 +195,17 @@ public class MapCanvas {
         gc.setLineWidth(ANCHO_CALLE_CONTORNO);
         gc.setStroke(Color.rgb(50, 50, 70, 0.45));
         for (int[] arista : aristas) {
-            double[] p1 = proyectarNodo(arista[0], tx, ty, tw, th);
-            double[] p2 = proyectarNodo(arista[1], tx, ty, tw, th);
-            gc.strokeLine(p1[0], p1[1], p2[0], p2[1]);
+            proyectarNodo(arista[0], tx, ty, tw, th, scratch0);
+            proyectarNodo(arista[1], tx, ty, tw, th, scratch1);
+            gc.strokeLine(scratch0[0], scratch0[1], scratch1[0], scratch1[1]);
         }
 
         gc.setLineWidth(ANCHO_CALLE_RELLENO);
         gc.setStroke(Color.rgb(210, 200, 180, 0.55));
         for (int[] arista : aristas) {
-            double[] p1 = proyectarNodo(arista[0], tx, ty, tw, th);
-            double[] p2 = proyectarNodo(arista[1], tx, ty, tw, th);
-            gc.strokeLine(p1[0], p1[1], p2[0], p2[1]);
+            proyectarNodo(arista[0], tx, ty, tw, th, scratch0);
+            proyectarNodo(arista[1], tx, ty, tw, th, scratch1);
+            gc.strokeLine(scratch0[0], scratch0[1], scratch1[0], scratch1[1]);
         }
     }
 
@@ -222,23 +229,23 @@ public class MapCanvas {
         double h = canvas.getHeight();
         if (w <= 0 || h <= 0) return;
 
-        double[] rect = calcularRectDestino(w, h);
-        double tx = rect[0], ty = rect[1], tw = rect[2], th = rect[3];
+        calcularRectDestino(w, h, scratchRect);
+        double tx = scratchRect[0], ty = scratchRect[1], tw = scratchRect[2], th = scratchRect[3];
 
         GraphicsContext gc = canvas.getGraphicsContext2D();
 
         gc.setLineWidth(4.0);
         gc.setStroke(colorAristas);
         for (int i = 0; i < ruta.length - 1; i++) {
-            double[] p1 = proyectarNodo(ruta[i], tx, ty, tw, th);
-            double[] p2 = proyectarNodo(ruta[i + 1], tx, ty, tw, th);
-            gc.strokeLine(p1[0], p1[1], p2[0], p2[1]);
+            proyectarNodo(ruta[i], tx, ty, tw, th, scratch0);
+            proyectarNodo(ruta[i + 1], tx, ty, tw, th, scratch1);
+            gc.strokeLine(scratch0[0], scratch0[1], scratch1[0], scratch1[1]);
         }
 
         gc.setFill(colorNodos);
         for (int i = 0; i < ruta.length; i++) {
-            double[] p = proyectarNodo(ruta[i], tx, ty, tw, th);
-            gc.fillOval(p[0] - RUTA_NODO_RADIO, p[1] - RUTA_NODO_RADIO,
+            proyectarNodo(ruta[i], tx, ty, tw, th, scratch0);
+            gc.fillOval(scratch0[0] - RUTA_NODO_RADIO, scratch0[1] - RUTA_NODO_RADIO,
                     RUTA_NODO_RADIO * 2, RUTA_NODO_RADIO * 2);
         }
     }
@@ -282,51 +289,48 @@ public class MapCanvas {
         double h = canvas.getHeight();
         if (w <= 0 || h <= 0) return;
 
-        double[] rect = calcularRectDestino(w, h);
-        double tx = rect[0], ty = rect[1], tw = rect[2], th = rect[3];
+        calcularRectDestino(w, h, scratchRect);
+        double tx = scratchRect[0], ty = scratchRect[1], tw = scratchRect[2], th = scratchRect[3];
 
         GraphicsContext gc = canvas.getGraphicsContext2D();
         for (int i = 0; i < vehiculos.tamanio(); i++) {
             Vehiculo v = (Vehiculo) vehiculos.devolver(i);
-            double[] p = proyectarInterpolado(v, tx, ty, tw, th);
+            proyectarInterpolado(v, tx, ty, tw, th, scratch0);
+            double px = scratch0[0], py = scratch0[1];
 
             boolean destacado = v.getDestacadoHasta() > System.nanoTime();
             double size = (destacado ? VEHICULO_RADIO * 1.6 : VEHICULO_RADIO) * 2.5;
 
-        // Calcular ángulo de rotación según dirección de movimiento
             double angulo = calcularAngulo(v, tx, ty, tw, th);
 
-        // Seleccionar imagen según estado
             javafx.scene.image.Image img = imagenSegunEstado(v.getEstado());
 
             if (img != null && !img.isError()) {
                 gc.save();
-                gc.translate(p[0], p[1]);
+                gc.translate(px, py);
                 gc.rotate(angulo);
                 gc.drawImage(img, -size / 2, -size / 2, size, size);
                 gc.restore();
             } else {
-                // Fallback al círculo original
                 Color color = v.getEstado() == EstadoVehiculo.DISPONIBLE ? Color.LIMEGREEN
                             : v.getEstado() == EstadoVehiculo.APROXIMANDO ? Color.ORANGE
                             : Color.RED;
                 if (destacado) color = Color.GOLD;
                 double radio = destacado ? VEHICULO_RADIO * 1.6 : VEHICULO_RADIO;
                 gc.setFill(color);
-                gc.fillOval(p[0] - radio, p[1] - radio, radio * 2, radio * 2);
+                gc.fillOval(px - radio, py - radio, radio * 2, radio * 2);
                 gc.setStroke(Color.color(0.15, 0.15, 0.15));
                 gc.setLineWidth(destacado ? 2.5 : 1.5);
-                gc.strokeOval(p[0] - radio, p[1] - radio, radio * 2, radio * 2);
+                gc.strokeOval(px - radio, py - radio, radio * 2, radio * 2);
             }
 
-            // Etiqueta con la patente
             gc.setFont(javafx.scene.text.Font.font("monospace", 10));
             gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
             gc.setStroke(Color.rgb(30, 30, 30));
             gc.setLineWidth(1.5);
-            gc.strokeText(v.getPatente(), p[0], p[1] - size / 2 - 3);
+            gc.strokeText(v.getPatente(), px, py - size / 2 - 3);
             gc.setFill(Color.WHITE);
-            gc.fillText(v.getPatente(), p[0], p[1] - size / 2 - 3);
+            gc.fillText(v.getPatente(), px, py - size / 2 - 3);
             gc.setTextAlign(javafx.scene.text.TextAlignment.LEFT);
         }
     }
@@ -340,33 +344,27 @@ public class MapCanvas {
     }
 
     private double calcularAngulo(Vehiculo v, double tx, double ty, double tw, double th) {
-            double[] pAnt = proyectarNodo(v.getNodoAnterior(), tx, ty, tw, th);
-            double[] pAct = proyectarNodo(v.getNodoActual(),   tx, ty, tw, th);
+            proyectarNodo(v.getNodoAnterior(), tx, ty, tw, th, scratch0);
+            proyectarNodo(v.getNodoActual(),   tx, ty, tw, th, scratch1);
 
-            double dx = pAct[0] - pAnt[0];
-            double dy = pAct[1] - pAnt[1];
+            double dx = scratch1[0] - scratch0[0];
+            double dy = scratch1[1] - scratch0[1];
 
-            // Sin movimiento → mantener 0°
             if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) return 0;
 
-            // Determinar dirección predominante
             if (Math.abs(dx) > Math.abs(dy)) {
-                // Movimiento horizontal
-                return dx > 0 ? 90 : 270; // derecha→90°, izquierda→270°
+                return dx > 0 ? 90 : 270;
             } else {
-                // Movimiento vertical
-                return dy > 0 ? 180 : 0;  // abajo→180°, arriba→0°
+                return dy > 0 ? 180 : 0;
         }
     }
 
-    private double[] proyectarInterpolado(Vehiculo v, double tx, double ty, double tw, double th) {
-        double[] pAnt = proyectarNodo(v.getNodoAnterior(), tx, ty, tw, th);
-        double[] pAct = proyectarNodo(v.getNodoActual(), tx, ty, tw, th);
+    private void proyectarInterpolado(Vehiculo v, double tx, double ty, double tw, double th, double[] out) {
+        proyectarNodo(v.getNodoAnterior(), tx, ty, tw, th, scratch0);
+        proyectarNodo(v.getNodoActual(), tx, ty, tw, th, scratch1);
         double t = Math.min(v.getProgreso(), 1.0);
-        return new double[]{
-                pAnt[0] + (pAct[0] - pAnt[0]) * t,
-                pAnt[1] + (pAct[1] - pAnt[1]) * t
-        };
+        out[0] = scratch0[0] + (scratch1[0] - scratch0[0]) * t;
+        out[1] = scratch0[1] + (scratch1[1] - scratch0[1]) * t;
     }
 
     /**
@@ -382,24 +380,25 @@ public class MapCanvas {
         double h = canvas.getHeight();
         if (w <= 0 || h <= 0) return;
 
-        double[] rect = calcularRectDestino(w, h);
-        double tx = rect[0], ty = rect[1], tw = rect[2], th = rect[3];
+        calcularRectDestino(w, h, scratchRect);
+        double tx = scratchRect[0], ty = scratchRect[1], tw = scratchRect[2], th = scratchRect[3];
 
         GraphicsContext gc = canvas.getGraphicsContext2D();
         for (int i = 0; i < usuarios.tamanio(); i++) {
             Usuario u = (Usuario) usuarios.devolver(i);
-            double[] p = proyectarNodo(u.getNodoOrigen(), tx, ty, tw, th);
+            proyectarNodo(u.getNodoOrigen(), tx, ty, tw, th, scratch0);
+            double px = scratch0[0], py = scratch0[1];
 
             if (imagenUsuario != null && !imagenUsuario.isError()) {
                 double size = USUARIO_RADIO * 4;
-                gc.drawImage(imagenUsuario, p[0] - size / 2, p[1] - size / 2, size, size);
+                gc.drawImage(imagenUsuario, px - size / 2, py - size / 2, size, size);
             } else {
                 gc.setFill(Color.MEDIUMVIOLETRED);
-                gc.fillOval(p[0] - USUARIO_RADIO, p[1] - USUARIO_RADIO,
+                gc.fillOval(px - USUARIO_RADIO, py - USUARIO_RADIO,
                         USUARIO_RADIO * 2, USUARIO_RADIO * 2);
                 gc.setStroke(Color.color(0.15, 0.15, 0.15));
                 gc.setLineWidth(1.5);
-                gc.strokeOval(p[0] - USUARIO_RADIO, p[1] - USUARIO_RADIO,
+                gc.strokeOval(px - USUARIO_RADIO, py - USUARIO_RADIO,
                         USUARIO_RADIO * 2, USUARIO_RADIO * 2);
             }
         }
@@ -417,14 +416,14 @@ public class MapCanvas {
         double h = canvas.getHeight();
         if (w <= 0 || h <= 0) return null;
 
-        double[] rect = calcularRectDestino(w, h);
-        double tx = rect[0], ty = rect[1], tw = rect[2], th = rect[3];
+        calcularRectDestino(w, h, scratchRect);
+        double tx = scratchRect[0], ty = scratchRect[1], tw = scratchRect[2], th = scratchRect[3];
         double umbral = USUARIO_RADIO * 2.5;
 
         for (int i = 0; i < usuarios.tamanio(); i++) {
             Usuario u = (Usuario) usuarios.devolver(i);
-            double[] p = proyectarNodo(u.getNodoOrigen(), tx, ty, tw, th);
-            double dx = x - p[0], dy = y - p[1];
+            proyectarNodo(u.getNodoOrigen(), tx, ty, tw, th, scratch0);
+            double dx = x - scratch0[0], dy = y - scratch0[1];
             if (dx * dx + dy * dy <= umbral * umbral) {
                 return u;
             }
@@ -464,16 +463,16 @@ public class MapCanvas {
         double h = canvas.getHeight();
         if (w <= 0 || h <= 0) return -1;
 
-        double[] rect = calcularRectDestino(w, h);
-        double tx = rect[0], ty = rect[1], tw = rect[2], th = rect[3];
+        calcularRectDestino(w, h, scratchRect);
+        double tx = scratchRect[0], ty = scratchRect[1], tw = scratchRect[2], th = scratchRect[3];
         double umbral = 20.0;
 
         int mejorNodo = -1;
         double mejorDist = umbral * umbral;
         int orden = grafo.getOrden();
         for (int i = 0; i < orden; i++) {
-            double[] p = proyectarNodo(i, tx, ty, tw, th);
-            double dx = x - p[0], dy = y - p[1];
+            proyectarNodo(i, tx, ty, tw, th, scratch0);
+            double dx = x - scratch0[0], dy = y - scratch0[1];
             double d = dx * dx + dy * dy;
             if (d < mejorDist) {
                 mejorDist = d;
@@ -495,14 +494,14 @@ public class MapCanvas {
         double h = canvas.getHeight();
         if (w <= 0 || h <= 0) return null;
 
-        double[] rect = calcularRectDestino(w, h);
-        double tx = rect[0], ty = rect[1], tw = rect[2], th = rect[3];
+        calcularRectDestino(w, h, scratchRect);
+        double tx = scratchRect[0], ty = scratchRect[1], tw = scratchRect[2], th = scratchRect[3];
         double umbral = VEHICULO_RADIO * 2.5;
 
         for (int i = 0; i < vehiculos.tamanio(); i++) {
             Vehiculo v = (Vehiculo) vehiculos.devolver(i);
-            double[] p = proyectarInterpolado(v, tx, ty, tw, th);
-            double dx = x - p[0], dy = y - p[1];
+            proyectarInterpolado(v, tx, ty, tw, th, scratch0);
+            double dx = x - scratch0[0], dy = y - scratch0[1];
             if (dx * dx + dy * dy <= umbral * umbral) {
                 return v;
             }
