@@ -110,6 +110,13 @@
 .info-scroll {
     -fx-max-height: 99999;
 }
+#sideScrollPane {
+    -fx-background: #f5f5f5;
+    -fx-border-width: 0;
+}
+#sideScrollPane > .viewport {
+    -fx-background-color: #f5f5f5;
+}
 
 /* ── Responsive: narrow sidebar ──────────── */
 #sidePanel.narrow .mono-label {

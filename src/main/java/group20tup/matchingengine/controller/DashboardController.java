@@ -24,6 +24,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
@@ -53,6 +54,8 @@ public class DashboardController {
     private StackPane mapContainer;
     @FXML
     private VBox sidePanel;
+    @FXML
+    private ScrollPane sideScrollPane;
     @FXML
     private ChoiceBox<String> algoritmoSelector;
     @FXML
@@ -372,7 +375,7 @@ public class DashboardController {
     private javafx.beans.value.ChangeListener<Number> crearWidthListener() {
         return (w, o, n) -> {
             double wVal = n.doubleValue();
-            sidePanel.setPrefWidth(Math.max(180, Math.min(350, wVal * 0.2)));
+            sideScrollPane.setPrefWidth(Math.max(180, Math.min(350, wVal * 0.2)));
             if (wVal < 1000 && !sidePanel.getStyleClass().contains("narrow")) {
                 sidePanel.getStyleClass().add("narrow");
             } else if (wVal >= 1000) {
