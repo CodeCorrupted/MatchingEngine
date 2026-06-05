@@ -45,6 +45,7 @@ public class GestorSimulacion implements MotorSimulacion {
     private int contadorUsuarios;
     private int contadorVehiculos;
     private int[] nodosValidos;
+    private int[] nodosConEntrada;
     private int[][] vecinosPorNodo;
 
     public boolean esNodoOcupado(int nodo) {
@@ -57,13 +58,16 @@ public class GestorSimulacion implements MotorSimulacion {
         return false;
     }
 
-    private int nodoNoOcupadoAleatorio() {
-        int orden = grafo.getOrden();
-        for (int intento = 0; intento < orden; intento++) {
-            int nodo = rnd.nextInt(orden);
+    private int nodoNoOcupadoAleatorio(int[] candidatos) {
+        for (int intento = 0; intento < candidatos.length; intento++) {
+            int nodo = candidatos[rnd.nextInt(candidatos.length)];
             if (!esNodoOcupado(nodo)) return nodo;
         }
-        return rnd.nextInt(orden);
+        return candidatos[rnd.nextInt(candidatos.length)];
+    }
+
+    private int nodoNoOcupadoAleatorio() {
+        return nodoNoOcupadoAleatorio(nodosConEntrada);
     }
 
     /**
@@ -83,6 +87,7 @@ public class GestorSimulacion implements MotorSimulacion {
         this.contadorUsuarios = 0;
         this.contadorVehiculos = 0;
         this.nodosValidos = precomputarNodosValidos();
+        this.nodosConEntrada = precomputarNodosConEntrada();
         this.vecinosPorNodo = precomputarVecinos();
     }
 
@@ -114,6 +119,36 @@ public class GestorSimulacion implements MotorSimulacion {
             }
         }
         return validos;
+    }
+
+    /**
+     * Precomputa la lista de nodos que tienen al menos una arista entrante
+     * en el grafo dirigido. Se usa para ubicar usuarios en nodos alcanzables.
+     * @return Arreglo con indices de nodos que tienen entrada
+     */
+    private int[] precomputarNodosConEntrada() {
+        MatrizGrafo matriz = grafo.getMatrizCosto();
+        int orden = grafo.getOrden();
+        int count = 0;
+        for (int i = 0; i < orden; i++) {
+            for (int j = 0; j < orden; j++) {
+                if (i != j && matriz.areConnected(j, i)) {
+                    count++;
+                    break;
+                }
+            }
+        }
+        int[] entrada = new int[count];
+        int idx = 0;
+        for (int i = 0; i < orden; i++) {
+            for (int j = 0; j < orden; j++) {
+                if (i != j && matriz.areConnected(j, i)) {
+                    entrada[idx++] = i;
+                    break;
+                }
+            }
+        }
+        return entrada;
     }
 
     /**
@@ -348,7 +383,7 @@ public class GestorSimulacion implements MotorSimulacion {
      * Crea un nuevo usuario en una ubicacion aleatoria del grafo.
      */
     private void crearUsuario() {
-        int nodo = nodoNoOcupadoAleatorio();
+        int nodo = nodoNoOcupadoAleatorio(nodosConEntrada);
         Usuario u = new Usuario(contadorUsuarios++, nodo);
         sistema.agregarUsuario(u);
     }
@@ -360,7 +395,7 @@ public class GestorSimulacion implements MotorSimulacion {
      * </p>
      */
     private void crearVehiculo() {
-        int nodo = nodoNoOcupadoAleatorio();
+        int nodo = nodoNoOcupadoAleatorio(nodosValidos);
         String patente = String.format("V%03d", contadorVehiculos++);
         Vehiculo v = new Vehiculo(patente, nodo);
         sistema.registrarVehiculo(v);
