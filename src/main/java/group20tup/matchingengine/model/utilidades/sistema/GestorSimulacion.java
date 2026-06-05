@@ -29,9 +29,14 @@ public class GestorSimulacion implements MotorSimulacion {
     private static final int VEHICULOS_MAX = 15;
     private static final int MAX_TICKS_SIN_RUTA = 10;
     private static final int LIMITE_VEHICULOS = 100;
+    private static final int LIMITE_USUARIOS = 80;
 
     public static int getLimiteVehiculos() {
         return LIMITE_VEHICULOS;
+    }
+
+    public static int getLimiteUsuarios() {
+        return LIMITE_USUARIOS;
     }
 
     private final SistemaViajes sistema;
@@ -43,7 +48,7 @@ public class GestorSimulacion implements MotorSimulacion {
     private int contadorVehiculos;
     private int[] nodosValidos;
 
-    private boolean esNodoOcupado(int nodo) {
+    public boolean esNodoOcupado(int nodo) {
         for (int i = 0; i < sistema.totalVehiculos(); i++) {
             if (sistema.getVehiculo(i).getNodoActual() == nodo) return true;
         }
@@ -374,6 +379,22 @@ public class GestorSimulacion implements MotorSimulacion {
 
     public boolean puedeAgregarVehiculos(int cantidad) {
         return sistema.totalVehiculos() + cantidad <= LIMITE_VEHICULOS;
+    }
+
+    public void crearUsuarioEnNodo(int nodo) {
+        if (esNodoOcupado(nodo)) return;
+        Usuario u = new Usuario(contadorUsuarios++, nodo);
+        sistema.agregarUsuario(u);
+    }
+
+    public void agregarUsuarios(int cantidad) {
+        for (int i = 0; i < cantidad; i++) {
+            crearUsuario();
+        }
+    }
+
+    public boolean puedeAgregarUsuarios(int cantidad) {
+        return sistema.totalUsuarios() + cantidad <= LIMITE_USUARIOS;
     }
 }
 

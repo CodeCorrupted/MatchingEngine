@@ -38,6 +38,7 @@ public class MapCanvas {
     private int[][] aristas;
     private CapaFondoOSM capaFondo;
     private boolean capaFondoActiva = true;
+    private int nodoResaltado = -1;
 
     private static final double RUTA_NODO_RADIO = 4.0;
     private static final double VEHICULO_RADIO = 6.0;
@@ -165,6 +166,15 @@ public class MapCanvas {
             
 
         dibujarAristas(gc, tx, ty, tw, th);
+
+        if (nodoResaltado >= 0) {
+            double[] p = proyectarNodo(nodoResaltado, tx, ty, tw, th);
+            gc.setFill(Color.rgb(255, 215, 0, 0.35));
+            gc.setStroke(Color.rgb(255, 215, 0, 0.9));
+            gc.setLineWidth(3.0);
+            gc.fillOval(p[0] - 16, p[1] - 16, 32, 32);
+            gc.strokeOval(p[0] - 16, p[1] - 16, 32, 32);
+        }
     }
 
     /**
@@ -429,6 +439,48 @@ public class MapCanvas {
     public boolean toggleCapaFondo() {
     capaFondoActiva = !capaFondoActiva;
     return capaFondoActiva;
+    }
+
+    public void setNodoResaltado(int nodo) {
+        this.nodoResaltado = nodo;
+    }
+
+    public void clearNodoResaltado() {
+        this.nodoResaltado = -1;
+    }
+
+    public int getNodoResaltado() {
+        return nodoResaltado;
+    }
+
+    /**
+     * Busca el nodo del grafo mas cercano a las coordenadas de pantalla dadas.
+     * @param x Coordenada X del click en el canvas
+     * @param y Coordenada Y del click en el canvas
+     * @return Indice del nodo mas cercano dentro del umbral, o -1 si no hay ninguno cerca
+     */
+    public int hitTestNodo(double x, double y) {
+        double w = canvas.getWidth();
+        double h = canvas.getHeight();
+        if (w <= 0 || h <= 0) return -1;
+
+        double[] rect = calcularRectDestino(w, h);
+        double tx = rect[0], ty = rect[1], tw = rect[2], th = rect[3];
+        double umbral = 20.0;
+
+        int mejorNodo = -1;
+        double mejorDist = umbral * umbral;
+        int orden = grafo.getOrden();
+        for (int i = 0; i < orden; i++) {
+            double[] p = proyectarNodo(i, tx, ty, tw, th);
+            double dx = x - p[0], dy = y - p[1];
+            double d = dx * dx + dy * dy;
+            if (d < mejorDist) {
+                mejorDist = d;
+                mejorNodo = i;
+            }
+        }
+        return mejorNodo;
     }
 
     /**

@@ -45,6 +45,13 @@
                 <TextField fx:id="txtCantidadVehiculos" promptText="Cantidad" prefWidth="60" />
                 <Button fx:id="btnAgregarVehiculos" text="+ Agregar" maxWidth="99999" />
             </HBox>
+            <Label text="Agregar usuarios" styleClass="section-title" />
+            <Label fx:id="lblUserCount" text="0 / 80" styleClass="info-label" />
+            <Button fx:id="btnColocarUsuario" text="📌 Colocar en mapa" maxWidth="99999" />
+            <HBox spacing="6" alignment="CENTER_LEFT">
+                <TextField fx:id="txtCantidadUsuarios" promptText="Cantidad" prefWidth="60" />
+                <Button fx:id="btnAgregarUsuarios" text="+ Agregar" maxWidth="99999" />
+            </HBox>
         </VBox>
     </right>
 </BorderPane>

@@ -138,4 +138,47 @@ public class ProyeccionMapa {
         this.panY = 0.0;
         this.zoom = 1.0;
     }
+
+    public double getZoom() {
+        return zoom;
+    }
+
+    public double getPanX() {
+        return panX;
+    }
+
+    public double getPanY() {
+        return panY;
+    }
+
+    /**
+     * Convierte coordenadas de pantalla a coordenadas geograficas (latitud, longitud)
+     * usando los mismos parametros destino que {@link #proyectar}.
+     * <p>
+     *     Es la operacion inversa de proyectar: dado un punto en el canvas,
+     *     devuelve las coordenadas geograficas correspondientes.
+     * </p>
+     * @param screenX Coordenada X en pixeles del canvas
+     * @param screenY Coordenada Y en pixeles del canvas
+     * @param targetX Coordenada X del borde izquierdo del rectangulo destino
+     * @param targetY Coordenada Y del borde superior del rectangulo destino
+     * @param targetW Ancho del rectangulo destino en pixeles
+     * @param targetH Alto del rectangulo destino en pixeles
+     * @return Arreglo de dos doubles {latitud, longitud}
+     */
+    public double[] screenToGeo(double screenX, double screenY,
+                                 double targetX, double targetY,
+                                 double targetW, double targetH) {
+        double rangoLat = maxLat - minLat;
+        double rangoLon = maxLon - minLon;
+        if (rangoLat == 0) rangoLat = 1;
+        if (rangoLon == 0) rangoLon = 1;
+
+        double unzoomedX = (screenX - panX) / zoom;
+        double unzoomedY = (screenY - panY) / zoom;
+
+        double lon = (unzoomedX - targetX) / targetW * rangoLon + minLon;
+        double lat = maxLat - (unzoomedY - targetY) / targetH * rangoLat;
+        return new double[]{lat, lon};
+    }
 }

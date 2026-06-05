@@ -87,7 +87,16 @@ public class DashboardController {
     private Button btnAgregarVehiculos;
     @FXML
     private Label lblVehicleCount;
+    @FXML
+    private TextField txtCantidadUsuarios;
+    @FXML
+    private Button btnAgregarUsuarios;
+    @FXML
+    private Label lblUserCount;
+    @FXML
+    private Button btnColocarUsuario;
 
+    private boolean modoColocarUsuario = false;
     private VehiculoDisponibleController ventanaVehiculoActiva = null;
     private Stage ventanaVehiculoSolicitadoActiva = null;
     private Stage ventanaVehiculosOcupadosActiva = null;
@@ -159,6 +168,39 @@ public class DashboardController {
         if (dragging) return;
 
         double x = e.getX(), y = e.getY();
+
+        if (modoColocarUsuario) {
+            boolean usuarioLimitado = !gestor.puedeAgregarUsuarios(1);
+            if (usuarioLimitado) {
+                mostrarAlerta("Limite alcanzado",
+                    "No se pueden agregar mas usuarios.\nLimite: " + GestorSimulacion.getLimiteUsuarios());
+                return;
+            }
+            int nodo = renderizadorMapa.hitTestNodo(x, y);
+            if (nodo == -1) return;
+
+            if (gestor.esNodoOcupado(nodo)) {
+                mostrarAlerta("Nodo ocupado", "Este nodo esta ocupado. Seleccione un nodo vacio.");
+                return;
+            }
+
+            renderizadorMapa.setNodoResaltado(nodo);
+            gestor.renderizarFrame();
+
+            MetadataNodo md = (MetadataNodo) grafoMapa.getListaEsquinas().devolver(nodo);
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("Colocar usuario");
+            confirm.setHeaderText("Colocar usuario en este nodo?");
+            confirm.setContentText("Nodo " + nodo + "\n" + md.getNombreEsquina());
+            confirm.showAndWait().ifPresent(respuesta -> {
+                if (respuesta == javafx.scene.control.ButtonType.OK) {
+                    gestor.crearUsuarioEnNodo(nodo);
+                }
+            });
+            renderizadorMapa.clearNodoResaltado();
+            gestor.renderizarFrame();
+            return;
+        }
 
         Usuario usuario = renderizadorMapa.hitTestUsuario(x, y, sistema.getListaUsuarios());
         if (usuario != null) {
@@ -789,6 +831,9 @@ public class DashboardController {
         });
 
         btnAgregarVehiculos.setOnAction(evt -> onAgregarVehiculos());
+
+        btnColocarUsuario.setOnAction(evt -> onColocarUsuario());
+        btnAgregarUsuarios.setOnAction(evt -> onAgregarUsuarios());
     }
 
     private javafx.beans.value.ChangeListener<Number> crearWidthListener() {
@@ -845,6 +890,7 @@ public class DashboardController {
         );
         lblStats.setText(texto);
         actualizarConteoVehiculos();
+        actualizarConteoUsuarios();
     }
 
     private void onAgregarVehiculos() {
@@ -881,6 +927,55 @@ public class DashboardController {
     private void actualizarConteoVehiculos() {
         if (sistema == null) return;
         lblVehicleCount.setText(sistema.totalVehiculos() + " / " + GestorSimulacion.getLimiteVehiculos());
+    }
+
+    private void onColocarUsuario() {
+        modoColocarUsuario = !modoColocarUsuario;
+        if (modoColocarUsuario) {
+            btnColocarUsuario.getStyleClass().add("active");
+            mapaCanvas.setCursor(javafx.scene.Cursor.CROSSHAIR);
+        } else {
+            btnColocarUsuario.getStyleClass().remove("active");
+            mapaCanvas.setCursor(javafx.scene.Cursor.DEFAULT);
+            renderizadorMapa.clearNodoResaltado();
+            if (gestor != null) gestor.renderizarFrame();
+        }
+    }
+
+    private void onAgregarUsuarios() {
+        String texto = txtCantidadUsuarios.getText().trim();
+        if (texto.isEmpty()) return;
+
+        int cantidad;
+        try {
+            cantidad = Integer.parseInt(texto);
+        } catch (NumberFormatException e) {
+            mostrarAlerta("Cantidad invalida", "Ingrese un numero entero positivo.");
+            return;
+        }
+
+        if (cantidad <= 0) {
+            mostrarAlerta("Cantidad invalida", "Ingrese un numero mayor a 0.");
+            return;
+        }
+
+        if (!gestor.puedeAgregarUsuarios(cantidad)) {
+            int disponibles = GestorSimulacion.getLimiteUsuarios() - sistema.totalUsuarios();
+            mostrarAlerta("Limite alcanzado",
+                "No se pueden agregar " + cantidad + " usuarios.\n"
+                + "Limite: " + GestorSimulacion.getLimiteUsuarios() + " | "
+                + "Actuales: " + sistema.totalUsuarios() + " | "
+                + "Disponibles: " + disponibles);
+            return;
+        }
+
+        gestor.agregarUsuarios(cantidad);
+        txtCantidadUsuarios.clear();
+    }
+
+    private void actualizarConteoUsuarios() {
+        if (sistema == null) return;
+        lblUserCount.setText(sistema.totalUsuarios() + " / " + GestorSimulacion.getLimiteUsuarios());
     }
 
     private void mostrarAlerta(String titulo, String mensaje) {
