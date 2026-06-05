@@ -13,6 +13,7 @@ import group20tup.matchingengine.model.utilidades.CalculadorRutas;
  *     La matriz de costo usa double[] para las distancias.
  * </p>
  *
+ * @author Iván
  */
 public class FloydWarshallRutas implements CalculadorRutas {
     private final double[][] costos;   // Distancias minimas entre nodos

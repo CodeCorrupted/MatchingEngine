@@ -8,6 +8,7 @@ import group20tup.matchingengine.model.utilidades.CalculadorRutas;
  * Implementacion del algoritmo de Dijkstra para caminos mas cortos de una sola fuente.
  * Usa un monticulo binario minimo para operaciones de cola de prioridad eficientes.
  * Calcula el camino mas corto desde un punto de origen dado a un nodo de destino.
+ * @author Iván
  */
 public class DijkstraRutas implements CalculadorRutas {
     private static final double INFINITO = Double.POSITIVE_INFINITY;

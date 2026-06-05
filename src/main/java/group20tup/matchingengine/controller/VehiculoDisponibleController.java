@@ -4,6 +4,11 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.stage.Stage;
 
+/**
+ * Controlador de la ventana de información de un vehículo disponible.
+ * Muestra patente, estado, posición y calle del vehículo seleccionado.
+ * @author Iván
+ */
 public class VehiculoDisponibleController {
 
     @FXML private Label vehiculoPatenteCatch;

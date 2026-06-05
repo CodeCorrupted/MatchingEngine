@@ -19,6 +19,7 @@ import java.util.Map;
  * Controlador del panel de cola de despacho (ColaDespacho.fxml).
  * Recibe una lista de datos de candidatos y crea dinámicamente
  * una instancia de VehiculoDisponibleL.fxml por cada uno.
+ * @author Iván
  */
 public class ColaDespachoController {
 
@@ -37,6 +38,7 @@ public class ColaDespachoController {
 
     /**
      * Representa los datos de un candidato de la cola.
+     * @author Iván
      */
     public static class CandidatoCola {
         public final String patente;

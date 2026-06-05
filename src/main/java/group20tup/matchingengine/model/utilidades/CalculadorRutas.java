@@ -3,6 +3,7 @@ package group20tup.matchingengine.model.utilidades;
 /**
  * Interfaz para los algoritmos de calculo de camino.
  * Diferentes implementaciones pueden ser intercambiadas.
+ * @author Iván
  */
 public interface CalculadorRutas {
     /**

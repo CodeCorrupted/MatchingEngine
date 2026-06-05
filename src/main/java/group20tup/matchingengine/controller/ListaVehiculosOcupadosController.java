@@ -26,6 +26,10 @@ public class ListaVehiculosOcupadosController {
     public void setStage(Stage stage) { this.stage = stage; }
     public void cerrar() { if (stage != null) stage.close(); }
 
+    /**
+     * Datos de un vehículo ocupado para mostrar en la lista.
+     * @author Iván
+     */
     public static class VehiculoOcupadoItem {
         public final String patente, estado, ubicacion;
         public final int nodo;

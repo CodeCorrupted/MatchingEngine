@@ -7,6 +7,7 @@ import javafx.scene.control.Label;
  * Controlador de una fila de la cola de despacho (VehiculoDisponibleL.fxml).
  * Muestra patente, tiempo de espera (ETA), distancia y tarifa de un
  * vehículo candidato.
+ * @author Iván
  */
 public class VehiculoDisponibleLController {
 

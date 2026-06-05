@@ -18,7 +18,7 @@ import java.util.Set;
  * a partir del tag "highway" del GeoJSON de OpenStreetMap.
  * No requiere conexión a internet en tiempo de ejecución.
  *
- * @author Generado para MatchingEngine
+ * @author David
  * @version 2.0
  */
 public class CapaFondoOSM {

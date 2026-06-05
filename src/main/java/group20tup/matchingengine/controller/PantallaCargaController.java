@@ -30,6 +30,7 @@ import java.util.ResourceBundle;
  *  3. Label "MATCHING ENGINE" + Label "Te conectamos..." aparecen con fade-in.
  *  4. Botón "INICIAR" aparece con fade-in y comienza animación de latido.
  *  5. Al 2.º latido el botón queda habilitado para interacción.
+ * @author Iván
  */
 public class PantallaCargaController implements Initializable {
 
