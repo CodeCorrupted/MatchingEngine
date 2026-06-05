@@ -8,7 +8,7 @@ package group20tup.matchingengine.model.utilidades.sistema;
  *     Separa la logica de simulacion del bucle de animacion de JavaFX,
  *     permitiendo testear la simulacion sin necesidad de un toolkit grafico.
  * </p>
- * @author Ivan
+ * @author Iván
  * @version 1.0
  */
 public interface MotorSimulacion {

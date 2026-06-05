@@ -11,7 +11,7 @@ import javafx.scene.input.ScrollEvent;
  * Maneja los eventos de interaccion con el canvas del mapa: arrastre (pan),
  * scroll (zoom) y presion. No gestiona los clics, que son derivados
  * a traves del controlador principal.
- * @author Ivan
+ * @author Iván
  */
 public class CanvasMapHandler {
     private final Canvas canvas;

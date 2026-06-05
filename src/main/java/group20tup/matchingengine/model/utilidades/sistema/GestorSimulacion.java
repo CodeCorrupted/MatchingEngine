@@ -19,7 +19,7 @@ import java.util.Random;
  *     directamente; el bucle de animacion es gestionado externamente por
  *     un adaptador.
  * </p>
- * @author Ivan
+ * @author Iván
  * @version 2.0
  */
 public class GestorSimulacion implements MotorSimulacion {

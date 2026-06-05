@@ -7,7 +7,7 @@ package group20tup.matchingengine.model.recursos.simulacion;
  *     APROXIMANDO: vehiculo en camino a recoger a un usuario.
  *     EN_VIAJE: vehiculo transportando a un pasajero a su destino.
  * </p>
- * @author Ivan
+ * @author Iván
  * @version 1.0
  */
 public enum EstadoVehiculo {

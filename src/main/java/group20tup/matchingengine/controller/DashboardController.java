@@ -44,7 +44,7 @@ import java.util.Random;
  *     SidePanelManager). Coordina la interaccion entre ellos y mantiene
  *     la configuracion global (algoritmo de ruteo, precarga de Floyd-Warshall).
  * </p>
- * @author Ivan
+ * @author Iván
  * @version 2.0
  */
 public class DashboardController {

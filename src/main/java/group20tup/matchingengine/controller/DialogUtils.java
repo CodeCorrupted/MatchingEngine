@@ -14,7 +14,7 @@ import javafx.stage.Stage;
 /**
  * Utilidades para mostrar dialogos de error con estilo coherente
  * usando ventanas Stage, reemplazando los mensajes a System.err.
- * @author Ivan
+ * @author Iván
  */
 public final class DialogUtils {
 

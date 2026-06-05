@@ -22,7 +22,7 @@ import java.util.Random;
  *     (ListaDoubleLinkedL, ColaPrioridadMonticulo) y los algoritmos de
  *     ruteo (CalculadorRutas).
  * </p>
- * @author Ivan
+ * @author Iván
  * @version 2.0
  */
 public class SistemaViajes {

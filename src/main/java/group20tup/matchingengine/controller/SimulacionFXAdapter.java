@@ -11,7 +11,7 @@ import javafx.animation.AnimationTimer;
  *     renderizado se actualiza en cada frame (~60fps) para animacion suave.
  *     Soporta pausa y velocidad variable (0.25x a 100x).
  * </p>
- * @author Ivan
+ * @author Iván
  * @version 2.0
  */
 public class SimulacionFXAdapter {

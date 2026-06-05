@@ -9,7 +9,7 @@ package group20tup.matchingengine.model.estructuras.lineales.matrices;
  *     de primitivos. Los errores de posicion se reportan mediante
  *     excepciones en lugar de imprimir por consola.
  * </p>
- * @author Ivan
+ * @author Iván
  * @version 1.1
  */
 public class MatrizArr {

@@ -31,7 +31,7 @@ import java.util.List;
  * Gestiona el panel lateral de la interfaz principal: construccion de la UI
  * de informacion, estadisticas, botones de agregar/eliminar entidades,
  * reinicio de simulacion, y ventanas emergentes de vehiculos.
- * @author Ivan
+ * @author Iván
  */
 public class SidePanelManager {
     private static final double VEHICULO_RADIO = 6.0;

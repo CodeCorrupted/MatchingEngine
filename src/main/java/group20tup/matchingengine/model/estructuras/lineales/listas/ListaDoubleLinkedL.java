@@ -9,7 +9,7 @@ import java.util.Objects;
  *     implementa el metodo abstracto iguales() utilizando
  *     Objects.equals() para una comparacion segura contra null.
  * </p>
- * @author Ivan
+ * @author Iván
  * @version 1.1
  */
 public class ListaDoubleLinkedL extends Lista1DLinkedL{

@@ -7,7 +7,7 @@ package group20tup.matchingengine.model.estructuras.nolineales.grafos;
  *     utilizar la subclase {@code GrafoMapa} que se auto-carga desde los
  *     archivos CSV de recursos.
  * </p>
- * @author Ivan
+ * @author Iván
  * @version 1.0
  */
 public class GrafoDirigido extends AbsGrafo{

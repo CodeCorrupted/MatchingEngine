@@ -29,7 +29,7 @@ import javafx.scene.text.TextAlignment;
  * su estado y renderizarlo en el canvas. Se trata de una dependencia de
  * solo lectura deliberada y necesaria para un renderizador basado en Canvas;
  * la vista nunca modifica el estado del modelo.</p>
- * @author Ivan
+ * @author Iván
  * @version 2.0
  */
 public class MapCanvas {

@@ -10,7 +10,7 @@ import java.util.Objects;
  *     un viaje, una referencia al usuario a bordo y la ruta activa
  *     a seguir.
  * </p>
- * @author Ivan
+ * @author Iván
  * @version 1.0
  */
 public class Vehiculo {

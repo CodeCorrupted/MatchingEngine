@@ -8,7 +8,7 @@ package group20tup.matchingengine.model.recursos;
  *     La igualdad entre dos nodos se determina por su indice interno, que
  *     es unico por construccion.
  * </p>
- * @author Ivan
+ * @author Iván
  * @version 1.0
  */
 public class MetadataNodo {

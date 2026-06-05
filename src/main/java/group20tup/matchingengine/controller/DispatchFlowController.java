@@ -24,7 +24,7 @@ import java.util.Random;
 /**
  * Gestiona el flujo de despacho asincronico: solicitud de viaje, evaluacion
  * de candidatos, animacion de rechazo, y confirmacion de asignacion.
- * @author Ivan
+ * @author Iván
  */
 public class DispatchFlowController {
     private final SistemaViajes sistema;

@@ -10,7 +10,7 @@ import group20tup.matchingengine.model.recursos.operaciones.OperacionesCL2;
  *     la catedra de AyED para lanzar errores en vez de usar
  *     simplemente System.out.prinln()
  * </p>
- * @author Ivan
+ * @author Iván
  * @version 1.1
  */
 public abstract class Lista0DLinkedL implements OperacionesCL2 {

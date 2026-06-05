@@ -20,7 +20,7 @@ import java.io.IOException;
  *     {@link #precomputedFloyd} permiten que la pantalla de carga
  *     precargue datos mientras se muestran las animaciones.
  * </p>
- * @author Ivan
+ * @author Iván
  * @version 1.0
  */
 public class Main extends Application {

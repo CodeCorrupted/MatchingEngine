@@ -9,7 +9,7 @@ import group20tup.matchingengine.model.recursos.operaciones.OperacionesCL3;
  *     GrafoMapa. Se la modifico ligeramente para que lance
  *     errores apropiados en vez de un simple System.out.prinln()
  * </p>
- * @author Ivan
+ * @author Iván
  * @version 1.1
  */
 public abstract class Lista1DLinkedL extends Lista0DLinkedL implements OperacionesCL3 {

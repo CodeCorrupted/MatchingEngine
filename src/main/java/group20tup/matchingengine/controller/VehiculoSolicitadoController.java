@@ -12,7 +12,7 @@ import javafx.stage.Stage;
  *     patente, ETA, distancia y tarifa. El botón "Aceptar" cierra
  *     la ventana sin efecto adicional.
  * </p>
- * @author Ivan
+ * @author Iván
  * @version 1.0
  */
 public class VehiculoSolicitadoController {

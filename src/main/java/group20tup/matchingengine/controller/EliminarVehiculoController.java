@@ -24,7 +24,7 @@ import javafx.stage.Stage;
  *     "Eliminar" por cada vehiculo en estado DISPONIBLE. Valida que
  *     la cantidad de vehiculos no baje del minimo permitido (10).
  * </p>
- * @author Ivan
+ * @author Iván
  */
 public class EliminarVehiculoController {
 

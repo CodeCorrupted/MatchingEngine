@@ -4,7 +4,7 @@ package group20tup.matchingengine.model.estructuras.nolineales.arboles;
  * Implementacion de monticulo binario minimo usando arreglos.
  * Almacena los indices de los nodos y su valores de prioridad asociados.
  * Sin operacion decreaseKey - usa delegacion perezosa con entradas duplicadas.
- * @author Ivan
+ * @author Iván
  * @version 1.0
  */
 public class MonticuloBinario {

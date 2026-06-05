@@ -17,7 +17,7 @@ import java.nio.charset.StandardCharsets;
  *     que anteriormente residia en {@code CargadorDatos}, eliminando
  *     la necesidad de una clase auxiliar externa.
  * </p>
- * @author Ivan
+ * @author Iván
  * @version 1.0
  */
 public class GrafoMapa extends GrafoDirigido {

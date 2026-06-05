@@ -16,7 +16,7 @@ import group20tup.matchingengine.model.recursos.MetadataNodo;
  * <p><b>Nota MVC:</b> Esta clase (vista) importa clases del modelo
  * ({@code MetadataNodo}) para leer coordenadas geograficas. Se trata de una
  * dependencia de solo lectura deliberada; la vista nunca modifica el modelo.</p>
- * @author Ivan
+ * @author Iván
  * @version 1.0
  */
 public class ProyeccionMapa {

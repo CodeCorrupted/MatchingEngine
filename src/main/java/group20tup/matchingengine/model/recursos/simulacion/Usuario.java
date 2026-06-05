@@ -7,7 +7,7 @@ package group20tup.matchingengine.model.recursos.simulacion;
  *     donde se encuentra actualmente, y opcionalmente un nodo de
  *     destino solicitado.
  * </p>
- * @author Ivan
+ * @author Iván
  * @version 1.0
  */
 public class Usuario {

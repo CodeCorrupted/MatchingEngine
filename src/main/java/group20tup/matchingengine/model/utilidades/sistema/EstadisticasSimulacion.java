@@ -7,7 +7,7 @@ package group20tup.matchingengine.model.utilidades.sistema;
  *     tiempos estimados, tarifas y distancias. Todos los metodos estan
  *     sincronizados para acceso seguro desde los hilos de simulacion y UI.
  * </p>
- * @author Ivan
+ * @author Iván
  * @version 1.0
  */
 public class EstadisticasSimulacion {

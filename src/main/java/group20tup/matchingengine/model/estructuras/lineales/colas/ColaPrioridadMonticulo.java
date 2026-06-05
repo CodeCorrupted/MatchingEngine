@@ -11,7 +11,7 @@ import group20tup.matchingengine.model.estructuras.nolineales.arboles.MonticuloB
  *     indice entero y se ordenan por una prioridad numerica (menor
  *     valor = mayor prioridad).
  * </p>
- * @author Ivan
+ * @author Iván
  * @version 1.0
  */
 public class ColaPrioridadMonticulo {
