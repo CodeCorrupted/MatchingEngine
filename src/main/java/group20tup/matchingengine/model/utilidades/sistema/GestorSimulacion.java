@@ -199,7 +199,10 @@ public class GestorSimulacion implements MotorSimulacion {
                 } else {
                     v.setTicksSinRuta(v.getTicksSinRuta() + 1);
                     if (v.getTicksSinRuta() >= MAX_TICKS_SIN_RUTA) {
-                        int teleportDestino = obtenerNodoValidoAleatorio();
+                        int teleportDestino;
+                        do {
+                            teleportDestino = obtenerNodoValidoAleatorio();
+                        } while (teleportDestino == v.getNodoActual() && nodosValidos.length > 1);
                         if (teleportDestino != -1) {
                             v.setNodoActual(teleportDestino);
                             v.setNodoAnterior(teleportDestino);
@@ -264,20 +267,22 @@ public class GestorSimulacion implements MotorSimulacion {
 
         double peso = grafo.getMatrizCosto().devolver(ruta[idx], ruta[idx + 1]);
         if (peso <= 0 || peso >= Double.POSITIVE_INFINITY) {
-            if (v.isDisponible()) {
-                v.setRutaActiva(new int[0]);
-            }
+            v.setEstado(EstadoVehiculo.DISPONIBLE);
+            v.setPasajeroAbordo(null);
+            v.setRutaActiva(new int[0]);
+            v.setTicksSinRuta(0);
             return;
         }
 
         double p = v.getProgreso() + 1.0 / peso;
         if (p >= 1.0) {
+            double exceso = p - 1.0;
             int siguiente = idx + 1;
             if (siguiente < ruta.length - 1) {
                 v.setNodoAnterior(ruta[siguiente]);
                 v.setNodoActual(ruta[siguiente + 1]);
                 v.setIndiceRuta(siguiente);
-                v.setProgreso(0.0);
+                v.setProgreso(exceso);
             } else {
                 v.setIndiceRuta(ruta.length - 1);
                 v.setNodoAnterior(ruta[ruta.length - 1]);
