@@ -7,13 +7,14 @@ import group20tup.matchingengine.model.utilidades.sistema.SistemaViajes;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.scene.Scene;
 import javafx.scene.text.Font;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 /**
@@ -144,10 +145,44 @@ public class EliminarVehiculoController {
     }
 
     private void mostrarAlerta(String titulo, String mensaje) {
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle(titulo);
-        alert.setHeaderText(null);
-        alert.setContentText(mensaje);
-        alert.showAndWait();
+        Stage dialogo = new Stage();
+        dialogo.initModality(Modality.APPLICATION_MODAL);
+        if (stage != null) dialogo.initOwner(stage);
+        dialogo.setTitle(titulo);
+        dialogo.setResizable(false);
+
+        String bgColor = "#e65100";
+        Label headerLbl = new Label(titulo);
+        headerLbl.setStyle("-fx-background-color: " + bgColor
+                + "; -fx-padding: 8 14; -fx-text-fill: white;"
+                + " -fx-font-weight: bold; -fx-font-size: 14px;");
+        headerLbl.setMaxWidth(Double.MAX_VALUE);
+
+        Label msgLbl = new Label(mensaje);
+        msgLbl.setWrapText(true);
+        msgLbl.setStyle("-fx-font-size: 13px; -fx-padding: 14 14 10 14;");
+
+        Button btnOK = new Button("Aceptar");
+        btnOK.setStyle("-fx-background-color: " + bgColor
+                + "; -fx-text-fill: white; -fx-padding: 6 20;"
+                + " -fx-font-weight: bold; -fx-font-size: 12px;");
+        btnOK.setOnAction(e -> dialogo.close());
+
+        HBox botones = new HBox(btnOK);
+        botones.setAlignment(javafx.geometry.Pos.CENTER);
+        botones.setStyle("-fx-padding: 6 14 12 14;");
+
+        VBox root = new VBox(0, headerLbl, msgLbl, botones);
+        root.setStyle("-fx-background-color: white;");
+
+        dialogo.setScene(new Scene(root));
+        double w = 350, h = 170;
+        dialogo.setWidth(w);
+        dialogo.setHeight(h);
+        if (stage != null) {
+            dialogo.setX(stage.getX() + (stage.getWidth() - w) / 2);
+            dialogo.setY(stage.getY() + (stage.getHeight() - h) / 2);
+        }
+        dialogo.showAndWait();
     }
 }

@@ -33,6 +33,7 @@ import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
@@ -193,15 +194,12 @@ public class DashboardController {
             gestor.renderizarFrame();
 
             MetadataNodo md = (MetadataNodo) grafoMapa.getListaEsquinas().devolver(nodo);
-            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-            confirm.setTitle("Colocar usuario");
-            confirm.setHeaderText("Colocar usuario en este nodo?");
-            confirm.setContentText("Nodo " + nodo + "\n" + md.getNombreEsquina());
-            confirm.showAndWait().ifPresent(respuesta -> {
-                if (respuesta == javafx.scene.control.ButtonType.OK) {
-                    gestor.crearUsuarioEnNodo(nodo);
-                }
-            });
+            boolean ok = mostrarDialogo(javafx.scene.control.Alert.AlertType.CONFIRMATION,
+                    "Colocar usuario", "Colocar usuario en este nodo?",
+                    "Nodo " + nodo + "\n" + md.getNombreEsquina(), true);
+            if (ok) {
+                gestor.crearUsuarioEnNodo(nodo);
+            }
             renderizadorMapa.clearNodoResaltado();
             gestor.renderizarFrame();
             return;
@@ -587,11 +585,9 @@ public class DashboardController {
                 lblInfo.setText("Algoritmo cambiado a Floyd-Warshall");
             } else {
                 algoritmoSelector.setValue("Dijkstra");
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Precomputando");
-                alert.setHeaderText("Floyd-Warshall se esta precomputando");
-                alert.setContentText("Espere a que termine el calculo inicial...");
-            alert.show();
+                mostrarDialogo(javafx.scene.control.Alert.AlertType.INFORMATION,
+                        "Precomputando", "Floyd-Warshall se esta precomputando",
+                        "Espere a que termine el calculo inicial...", false);
             }
         } else {
             sistema.setRuteador(dijkstraRuteador);
@@ -982,14 +978,12 @@ public class DashboardController {
     }
 
     private void onReiniciarSimulacion() {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Reiniciar simulacion");
-        alert.setHeaderText(null);
-        alert.setContentText("Se eliminaran todos los vehiculos y usuarios actuales.\n"
+        boolean ok = mostrarDialogo(javafx.scene.control.Alert.AlertType.CONFIRMATION,
+                "Reiniciar simulacion", null,
+                "Se eliminaran todos los vehiculos y usuarios actuales.\n"
                 + "La simulacion volvera a tener 10 vehiculos y 5 usuarios.\n"
-                + "¿Desea continuar?");
-        if (alert.showAndWait().orElse(javafx.scene.control.ButtonType.CANCEL)
-                != javafx.scene.control.ButtonType.OK) {
+                + "¿Desea continuar?", true);
+        if (!ok) {
             return;
         }
 
@@ -1061,11 +1055,88 @@ public class DashboardController {
         lblUserCount.setText(sistema.totalUsuarios() + " / " + GestorSimulacion.getLimiteUsuarios());
     }
 
+    /**
+     * Muestra un dialogo como ventana decorada (Stage) en lugar de un Alert
+     * de JavaFX, para evitar problemas con gestores de ventanas que
+     * colocan en modo tiling las ventanas UTILITY.
+     * @param tipo Tipo de dialogo (CONFIRMATION, WARNING, INFORMATION)
+     * @param titulo Titulo de la ventana
+     * @param header Texto del encabezado (null para omitirlo)
+     * @param mensaje Contenido del mensaje
+     * @param bloqueante true para showAndWait, false para show (no bloqueante)
+     * @return true si el usuario presiono Aceptar/OK, false si Cancelar
+     */
+    private boolean mostrarDialogo(javafx.scene.control.Alert.AlertType tipo,
+                                   String titulo, String header,
+                                   String mensaje, boolean bloqueante) {
+        Stage owner = (Stage) mapaCanvas.getScene().getWindow();
+        Stage dialogo = new Stage();
+        dialogo.initModality(Modality.APPLICATION_MODAL);
+        dialogo.initOwner(owner);
+        dialogo.setTitle(titulo);
+        dialogo.setResizable(false);
+
+        String bgColor;
+        switch (tipo) {
+            case CONFIRMATION: bgColor = "#1565c0"; break;
+            case WARNING:      bgColor = "#e65100"; break;
+            case ERROR:        bgColor = "#d32f2f"; break;
+            default:           bgColor = "#2e7d32"; break;
+        }
+
+        VBox root = new VBox(0);
+        root.setStyle("-fx-background-color: white;");
+
+        Label headerLbl = new Label(header != null ? header : titulo);
+        headerLbl.setStyle("-fx-background-color: " + bgColor
+                + "; -fx-padding: 8 14; -fx-text-fill: white;"
+                + " -fx-font-weight: bold; -fx-font-size: 14px;");
+        headerLbl.setMaxWidth(Double.MAX_VALUE);
+
+        Label msgLbl = new Label(mensaje);
+        msgLbl.setWrapText(true);
+        msgLbl.setStyle("-fx-font-size: 13px; -fx-padding: 14 14 10 14;");
+
+        boolean[] resultado = { true };
+
+        HBox botones = new HBox(10);
+        botones.setAlignment(javafx.geometry.Pos.CENTER);
+        botones.setStyle("-fx-padding: 6 14 12 14;");
+
+        Button btnOK = new Button("Aceptar");
+        btnOK.setStyle("-fx-background-color: " + bgColor
+                + "; -fx-text-fill: white; -fx-padding: 6 20;"
+                + " -fx-font-weight: bold; -fx-font-size: 12px;");
+        btnOK.setOnAction(e -> { resultado[0] = true; dialogo.close(); });
+        botones.getChildren().add(btnOK);
+
+        if (tipo == javafx.scene.control.Alert.AlertType.CONFIRMATION) {
+            Button btnCancelar = new Button("Cancelar");
+            btnCancelar.setStyle("-fx-padding: 6 20; -fx-font-size: 12px;");
+            btnCancelar.setOnAction(e -> { resultado[0] = false; dialogo.close(); });
+            botones.getChildren().add(btnCancelar);
+        }
+
+        root.getChildren().addAll(headerLbl, msgLbl, botones);
+
+        Scene escena = new Scene(root);
+        dialogo.setScene(escena);
+
+        double w = 360, h = 180;
+        dialogo.setWidth(w);
+        dialogo.setHeight(h);
+        dialogo.setX(owner.getX() + (owner.getWidth() - w) / 2);
+        dialogo.setY(owner.getY() + (owner.getHeight() - h) / 2);
+
+        if (bloqueante) {
+            dialogo.showAndWait();
+        } else {
+            dialogo.show();
+        }
+        return resultado[0];
+    }
+
     private void mostrarAlerta(String titulo, String mensaje) {
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle(titulo);
-        alert.setHeaderText(null);
-        alert.setContentText(mensaje);
-        alert.showAndWait();
+        mostrarDialogo(javafx.scene.control.Alert.AlertType.WARNING, titulo, null, mensaje, true);
     }
 }
