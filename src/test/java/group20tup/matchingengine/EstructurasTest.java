@@ -205,4 +205,210 @@ class EstructurasTest {
         ListaDoubleLinkedL lista = new ListaDoubleLinkedL();
         assertThrows(IndexOutOfBoundsException.class, () -> lista.eliminar(0));
     }
+
+    @Test
+    @DisplayName("MonticuloBinario String: basico vacio y extrae en orden")
+    void testMonticuloBinarioStringBasico() {
+        MonticuloBinario heap = new MonticuloBinario(2);
+
+        assertTrue(heap.estaVacia());
+        assertEquals(0, heap.tamanio());
+        assertNull(heap.extraerMinString());
+
+        heap.insertar("AAA111", 3.0);
+        heap.insertar("BBB222", 1.0);
+        heap.insertar("CCC333", 2.0);
+
+        assertFalse(heap.estaVacia());
+        assertEquals(3, heap.tamanio());
+
+        assertEquals("BBB222", heap.extraerMinString());
+        assertEquals("CCC333", heap.extraerMinString());
+        assertEquals("AAA111", heap.extraerMinString());
+        assertTrue(heap.estaVacia());
+    }
+
+    @Test
+    @DisplayName("MonticuloBinario String: un solo elemento")
+    void testMonticuloBinarioStringUnSoloElemento() {
+        MonticuloBinario heap = new MonticuloBinario(5);
+
+        heap.insertar("XYZ999", 7.5);
+        assertEquals(1, heap.tamanio());
+        assertFalse(heap.estaVacia());
+
+        assertEquals("XYZ999", heap.extraerMinString());
+        assertTrue(heap.estaVacia());
+        assertEquals(0, heap.tamanio());
+        assertNull(heap.extraerMinString());
+    }
+
+    @Test
+    @DisplayName("MonticuloBinario String: 5 elementos extrae en orden ascendente")
+    void testMonticuloBinarioStringMultiplesElementos() {
+        MonticuloBinario heap = new MonticuloBinario(3);
+
+        heap.insertar("EEE", 50.0);
+        heap.insertar("AAA", 10.0);
+        heap.insertar("DDD", 40.0);
+        heap.insertar("BBB", 20.0);
+        heap.insertar("CCC", 30.0);
+
+        assertEquals(5, heap.tamanio());
+
+        assertEquals("AAA", heap.extraerMinString());
+        assertEquals("BBB", heap.extraerMinString());
+        assertEquals("CCC", heap.extraerMinString());
+        assertEquals("DDD", heap.extraerMinString());
+        assertEquals("EEE", heap.extraerMinString());
+        assertTrue(heap.estaVacia());
+    }
+
+    @Test
+    @DisplayName("MonticuloBinario String: prioridades iguales mantiene todos los elementos")
+    void testMonticuloBinarioStringIgualesPrioridad() {
+        MonticuloBinario heap = new MonticuloBinario(4);
+
+        heap.insertar("AAA", 5.0);
+        heap.insertar("BBB", 5.0);
+        heap.insertar("CCC", 5.0);
+
+        assertEquals(3, heap.tamanio());
+
+        String first  = heap.extraerMinString();
+        String second = heap.extraerMinString();
+        String third  = heap.extraerMinString();
+        assertNotNull(first);
+        assertNotNull(second);
+        assertNotNull(third);
+        assertTrue(heap.estaVacia());
+
+        assertTrue(!first.equals(second) && !first.equals(third) && !second.equals(third),
+                "Las tres claves extraidas deben ser distintas");
+    }
+
+    @Test
+    @DisplayName("MonticuloBinario String: copia conserva claves e independiza extraccion")
+    void testMonticuloBinarioStringCopiaConservaClaves() {
+        MonticuloBinario original = new MonticuloBinario(4);
+        original.insertar("AAA", 3.0);
+        original.insertar("BBB", 1.0);
+
+        MonticuloBinario copia = new MonticuloBinario(original);
+
+        assertEquals("BBB", copia.extraerMinString());
+        assertEquals("AAA", copia.extraerMinString());
+        assertTrue(copia.estaVacia());
+
+        assertEquals(2, original.tamanio(), "Original no debe ser afectado por la copia");
+    }
+
+    @Test
+    @DisplayName("MonticuloBinario String: crecimiento de capacidad preserva claves")
+    void testMonticuloBinarioStringCapacidadGrowth() {
+        MonticuloBinario heap = new MonticuloBinario(2);
+
+        heap.insertar("AAA", 50.0);
+        heap.insertar("BBB", 40.0);
+        heap.insertar("CCC", 30.0);
+        heap.insertar("DDD", 20.0);
+        heap.insertar("EEE", 10.0);
+
+        assertEquals(5, heap.tamanio());
+
+        assertEquals("EEE", heap.extraerMinString());
+        assertEquals("DDD", heap.extraerMinString());
+        assertEquals("CCC", heap.extraerMinString());
+        assertEquals("BBB", heap.extraerMinString());
+        assertEquals("AAA", heap.extraerMinString());
+    }
+
+    @Test
+    @DisplayName("MonticuloBinario String: decreaseKey String reubica elemento")
+    void testMonticuloBinarioStringDecreaseKey() {
+        MonticuloBinario heap = new MonticuloBinario(4);
+
+        heap.insertar("AAA", 10.0);
+        heap.insertar("BBB", 20.0);
+        heap.insertar("CCC", 30.0);
+
+        heap.decreaseKey("BBB", 1.0);
+
+        assertEquals("BBB", heap.extraerMinString());
+        assertEquals("AAA", heap.extraerMinString());
+        assertEquals("CCC", heap.extraerMinString());
+        assertTrue(heap.estaVacia());
+    }
+
+    @Test
+    @DisplayName("MonticuloBinario String: decreaseKey mayor o inexistente no altera monticulo")
+    void testMonticuloBinarioStringDecreaseKeyMayorYNoExistente() {
+        MonticuloBinario heap = new MonticuloBinario(4);
+
+        heap.insertar("AAA", 5.0);
+        heap.insertar("BBB", 10.0);
+
+        heap.decreaseKey("BBB", 20.0);
+        heap.decreaseKey("ZZZ", 1.0);
+
+        assertEquals(2, heap.tamanio());
+        assertEquals("AAA", heap.extraerMinString());
+        assertEquals("BBB", heap.extraerMinString());
+        assertTrue(heap.estaVacia());
+    }
+
+    @Test
+    @DisplayName("MonticuloBinario String: reset elimina todas las claves y permite reinsercion")
+    void testMonticuloBinarioStringReset() {
+        MonticuloBinario heap = new MonticuloBinario(4);
+        heap.insertar("AAA", 1.0);
+        heap.insertar("BBB", 2.0);
+
+        heap.reset();
+        assertTrue(heap.estaVacia());
+        assertEquals(0, heap.tamanio());
+        assertNull(heap.extraerMinString());
+
+        heap.insertar("CCC", 5.0);
+        assertEquals("CCC", heap.extraerMinString());
+        assertTrue(heap.estaVacia());
+    }
+
+    @Test
+    @DisplayName("ColaPrioridadMonticulo: insertarPatente y extraerMinPatente extrae en orden")
+    void testColaPrioridadMonticuloPatenteBasico() {
+        ColaPrioridadMonticulo cola = new ColaPrioridadMonticulo(4);
+
+        cola.insertarPatente("ABC123", 30.0);
+        cola.insertarPatente("DEF456", 10.0);
+        cola.insertarPatente("GHI789", 20.0);
+
+        assertEquals(3, cola.tamanio());
+
+        assertEquals("DEF456", cola.extraerMinPatente());
+        assertEquals("GHI789", cola.extraerMinPatente());
+        assertEquals("ABC123", cola.extraerMinPatente());
+        assertTrue(cola.estaVacia());
+    }
+
+    @Test
+    @DisplayName("ColaPrioridadMonticulo: extraerMinPatente vacia y actualizarPrioridadPatente")
+    void testColaPrioridadMonticuloPatenteVaciaYActualizarPrioridad() {
+        ColaPrioridadMonticulo cola = new ColaPrioridadMonticulo(4);
+
+        assertNull(cola.extraerMinPatente());
+
+        cola.insertarPatente("AAA111", 50.0);
+        cola.insertarPatente("BBB222", 30.0);
+        cola.insertarPatente("CCC333", 40.0);
+
+        cola.actualizarPrioridadPatente("AAA111", 1.0);
+
+        assertEquals("AAA111", cola.extraerMinPatente());
+        assertEquals("BBB222", cola.extraerMinPatente());
+        assertEquals("CCC333", cola.extraerMinPatente());
+        assertTrue(cola.estaVacia());
+
+        assertNull(cola.extraerMinPatente());
+    }
 }

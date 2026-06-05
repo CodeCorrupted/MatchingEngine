@@ -175,7 +175,7 @@ public class GrafoMapa extends GrafoDirigido {
             }
             System.out.println("[Exito] Matriz de adyacencia de " + filaInterna + "x" + filaInterna + " convertida a pesos ETA (segundos).");
         } catch (Exception ex) {
-            System.err.println("No se pudo encontrar el archivo para cargar la matriz: " + ex.getMessage());
+            throw new IllegalArgumentException("Error al cargar la matriz vial: " + ex.getMessage(), ex);
         }
     }
 

@@ -122,6 +122,7 @@ public class DashboardController {
     private Label lblColaDespacho;
     private Label lblStats;
     private SimulacionFXAdapter adaptadorSimulacion;
+    private final Random rnd = new Random();
     private PauseTransition pausaDespacho;
     private Usuario usuarioDespachando;
     private double mouseX;
@@ -310,7 +311,7 @@ public class DashboardController {
         String colaTexto = sistema.obtenerTextoColaDespacho(usuario);
         lblColaDespacho.setText(colaTexto);
 
-        sistema.iniciarDespacho(usuario, new Random());
+        sistema.iniciarDespacho(usuario, rnd);
         if (sistema.getTotalCandidatosDespacho() == 0) {
             lblInfo.setText("No hay vehiculos disponibles\npara el usuario " + usuario.getId() + ".");
             return;

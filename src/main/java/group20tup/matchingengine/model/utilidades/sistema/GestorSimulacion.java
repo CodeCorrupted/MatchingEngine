@@ -74,11 +74,15 @@ public class GestorSimulacion implements MotorSimulacion {
      * @param grafo Grafo vial de la ciudad para consultas de conectividad
      */
     public GestorSimulacion(SistemaViajes sistema, MapCanvas renderizador, GrafoMapa grafo, CalculadorRutas ruteador) {
+        this(sistema, renderizador, grafo, ruteador, new Random());
+    }
+
+    public GestorSimulacion(SistemaViajes sistema, MapCanvas renderizador, GrafoMapa grafo, CalculadorRutas ruteador, Random rnd) {
         this.sistema = sistema;
         this.renderizador = renderizador;
         this.grafo = grafo;
         this.ruteador = ruteador;
-        this.rnd = new Random();
+        this.rnd = rnd;
         this.contadorUsuarios = 0;
         this.contadorVehiculos = 0;
         this.nodosValidos = precomputarNodosValidos();

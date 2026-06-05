@@ -458,6 +458,236 @@ class SistemaViajesTest {
     }
 
     @Nested
+    @DisplayName("Reiniciar sistema")
+    class Reiniciar {
+
+        @Test
+        @DisplayName("reiniciar vacia todo el sistema")
+        void testReiniciarVaciaTodoElSistema() {
+            SistemaViajes s = crearSistema();
+            s.registrarVehiculo(new Vehiculo("V001", 0));
+            s.registrarVehiculo(new Vehiculo("V002", 100));
+            s.registrarVehiculo(new Vehiculo("V003", 200));
+            s.agregarUsuario(new Usuario(1, 47));
+            s.agregarUsuario(new Usuario(2, 150));
+            Usuario u = new Usuario(3, 0);
+            s.agregarUsuario(u);
+            s.iniciarDespacho(u, null);
+
+            s.reiniciar();
+
+            assertEquals(0, s.totalVehiculos());
+            assertEquals(0, s.totalUsuarios());
+            assertFalse(s.hayDespachoActivo());
+            assertEquals(0, s.getTotalCandidatosDespacho());
+            assertEquals(0, s.getCandidatosProcesadosDespacho());
+            assertNull(s.getUltimoPatenteProcesado());
+        }
+
+        @Test
+        @DisplayName("reiniciar limpia cola de ocupados")
+        void testReiniciarLimpiaColaOcupados() {
+            SistemaViajes s = crearSistema();
+            s.registrarVehiculo(new Vehiculo("V001", 0));
+            s.agregarUsuario(new Usuario(1, 47));
+            Vehiculo v = s.solicitarViaje(s.getUsuario(0));
+            assertNotNull(v);
+
+            assertFalse(s.getColaOcupados().estaVacia());
+
+            s.reiniciar();
+            assertTrue(s.getColaOcupados().estaVacia());
+        }
+
+        @Test
+        @DisplayName("reiniciar limpia estadisticas")
+        void testReiniciarLimpiaEstadisticas() {
+            SistemaViajes s = crearSistema();
+            for (int i = 0; i < 5; i++) {
+                s.registrarVehiculo(new Vehiculo(String.format("M%02d", i), i * 50));
+            }
+            for (int i = 0; i < 3; i++) {
+                Usuario u = new Usuario(200 + i, 47);
+                s.agregarUsuario(u);
+                Vehiculo v = s.solicitarViaje(u);
+                if (v != null) {
+                    s.realizarPickup(v);
+                    s.completarTransito(v);
+                }
+            }
+            assertTrue(s.getEstadisticas().getViajesSolicitados() > 0);
+
+            s.reiniciar();
+
+            assertEquals(0, s.getEstadisticas().getViajesSolicitados());
+            assertEquals(0, s.getEstadisticas().getViajesCompletados());
+            assertEquals(0.0, s.getEstadisticas().getSumaDistanciasKm(), 1e-9);
+            assertEquals(0.0, s.getEstadisticas().getSumaETASegundos(), 1e-9);
+            assertEquals(0.0, s.getEstadisticas().getSumaTarifas(), 1e-9);
+        }
+
+        @Test
+        @DisplayName("reiniciar permite reusar el sistema inmediatamente")
+        void testReiniciarPermiteReusarSistema() {
+            SistemaViajes s = crearSistema();
+            s.registrarVehiculo(new Vehiculo("V001", 0));
+            s.agregarUsuario(new Usuario(1, 47));
+            s.solicitarViaje(s.getUsuario(0));
+
+            s.reiniciar();
+
+            s.registrarVehiculo(new Vehiculo("V001", 0));
+            s.agregarUsuario(new Usuario(1, 47));
+            Vehiculo elegido = s.solicitarViaje(s.getUsuario(0));
+            assertNotNull(elegido);
+        }
+    }
+
+    @Nested
+    @DisplayName("Remocion de vehiculos")
+    class RemocionVehiculos {
+
+        @Test
+        @DisplayName("removerVehiculoPorPatente existente funciona")
+        void testRemoverVehiculoPorPatenteExiste() {
+            SistemaViajes s = crearSistema();
+            s.registrarVehiculo(new Vehiculo("RM01", 0));
+
+            boolean resultado = s.removerVehiculoPorPatente("RM01");
+            assertTrue(resultado);
+            assertEquals(0, s.totalVehiculos());
+            assertNull(s.buscarVehiculoPorPatente("RM01"));
+        }
+
+        @Test
+        @DisplayName("removerVehiculoPorPatente inexistente retorna false")
+        void testRemoverVehiculoPorPatenteNoExiste() {
+            SistemaViajes s = crearSistema();
+            assertFalse(s.removerVehiculoPorPatente("NONE"));
+            assertEquals(0, s.totalVehiculos());
+        }
+
+        @Test
+        @DisplayName("removerVehiculoPorPatente reconstruye cola de ocupados")
+        void testRemoverVehiculoPorPatenteReconstruyeColaOcupados() {
+            SistemaViajes s = crearSistema();
+            s.registrarVehiculo(new Vehiculo("DISP01", 0));
+            s.registrarVehiculo(new Vehiculo("OCUP01", 100));
+            s.agregarUsuario(new Usuario(1, 47));
+            Vehiculo v = s.solicitarViaje(s.getUsuario(0));
+            assertNotNull(v);
+            assertFalse(s.getColaOcupados().estaVacia());
+
+            s.removerVehiculoPorPatente("DISP01");
+            assertFalse(s.getColaOcupados().estaVacia());
+        }
+
+        @Test
+        @DisplayName("removerVehiculoPorPatente mantiene los vehiculos restantes")
+        void testRemoverVehiculoPorPatenteMantieneRestantes() {
+            SistemaViajes s = crearSistema();
+            s.registrarVehiculo(new Vehiculo("A", 0));
+            s.registrarVehiculo(new Vehiculo("B", 100));
+            s.registrarVehiculo(new Vehiculo("C", 200));
+
+            s.removerVehiculoPorPatente("B");
+            assertEquals(2, s.totalVehiculos());
+            assertNotNull(s.buscarVehiculoPorPatente("A"));
+            assertNull(s.buscarVehiculoPorPatente("B"));
+            assertNotNull(s.buscarVehiculoPorPatente("C"));
+        }
+
+        @Test
+        @DisplayName("removerVehiculo por referencia funciona")
+        void testRemoverVehiculoPorReferencia() {
+            SistemaViajes s = crearSistema();
+            Vehiculo v = new Vehiculo("VR01", 0);
+            s.registrarVehiculo(v);
+            assertEquals(1, s.totalVehiculos());
+
+            s.removerVehiculo(v);
+            assertEquals(0, s.totalVehiculos());
+        }
+
+        @Test
+        @DisplayName("removerVehiculo por referencia inexistente no falla")
+        void testRemoverVehiculoPorReferenciaNoExiste() {
+            SistemaViajes s = crearSistema();
+            Vehiculo v = new Vehiculo("VR01", 0);
+
+            assertDoesNotThrow(() -> s.removerVehiculo(v));
+            assertEquals(0, s.totalVehiculos());
+        }
+    }
+
+    @Nested
+    @DisplayName("ETA restante")
+    class ETARestante {
+
+        @Test
+        @DisplayName("calcularRestanteETA sin ruta activa retorna infinito")
+        void testCalcularRestanteETASinRuta() {
+            SistemaViajes s = crearSistema();
+            Vehiculo v = new Vehiculo("ETA01", 0);
+            assertEquals(0, v.getRutaActiva().length);
+
+            double eta = s.calcularRestanteETA(v);
+            assertEquals(Double.POSITIVE_INFINITY, eta, 1e-9);
+        }
+
+        @Test
+        @DisplayName("calcularRestanteETA desde el inicio suma toda la ruta")
+        void testCalcularRestanteETAConRutaCompleta() {
+            SistemaViajes s = crearSistema();
+            int a = 0, b = 47;
+            if (!mapaSalta.getMatrizCosto().areConnected(a, b)) {
+                a = 1;
+                b = 47;
+            }
+            Vehiculo v = new Vehiculo("ETA02", a);
+            v.setRutaActiva(new int[]{a, b});
+
+            double eta = s.calcularRestanteETA(v);
+            double esperada = mapaSalta.getMatrizCosto().devolver(a, b);
+            assertEquals(esperada, eta, 1e-9);
+        }
+
+        @Test
+        @DisplayName("calcularRestanteETA desde indice medio suma solo el resto")
+        void testCalcularRestanteETAEnMedioRuta() {
+            SistemaViajes s = crearSistema();
+            int a = 0, b = 47, c = 150;
+            if (!mapaSalta.getMatrizCosto().areConnected(b, c)) {
+                c = b + 1;
+            }
+            Vehiculo v = new Vehiculo("ETA03", a);
+            v.setRutaActiva(new int[]{a, b, c});
+            v.setIndiceRuta(1);
+
+            double eta = s.calcularRestanteETA(v);
+            double esperada = mapaSalta.getMatrizCosto().devolver(b, c);
+            assertEquals(esperada, eta, 1e-9);
+        }
+
+        @Test
+        @DisplayName("calcularRestanteETA en el ultimo nodo retorna 0")
+        void testCalcularRestanteETAEnUltimoNodo() {
+            SistemaViajes s = crearSistema();
+            int a = 0, b = 47;
+            if (!mapaSalta.getMatrizCosto().areConnected(a, b)) {
+                a = 1;
+                b = 47;
+            }
+            Vehiculo v = new Vehiculo("ETA04", a);
+            v.setRutaActiva(new int[]{a, b});
+            v.setIndiceRuta(1);
+
+            double eta = s.calcularRestanteETA(v);
+            assertEquals(0.0, eta, 1e-9);
+        }
+    }
+
+    @Nested
     @DisplayName("Estadisticas de simulacion")
     class Estadisticas {
 

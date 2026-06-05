@@ -37,6 +37,7 @@ public class SistemaViajes {
     private final ColaPrioridadMonticulo colaOcupados;
     private final EstadisticasSimulacion estadisticas;
 
+    private final Random rnd;
     private ColaPrioridadMonticulo colaDespachoActiva;
     private boolean despachoEnCurso;
     private int totalCandidatos;
@@ -51,8 +52,13 @@ public class SistemaViajes {
      * @param ruteador Algoritmo de calculo de rutas (Dijkstra o Floyd-Warshall)
      */
     public SistemaViajes(GrafoDirigido grafo, CalculadorRutas ruteador) {
+        this(grafo, ruteador, new Random());
+    }
+
+    public SistemaViajes(GrafoDirigido grafo, CalculadorRutas ruteador, Random rnd) {
         this.grafo = grafo;
         this.ruteador = ruteador;
+        this.rnd = rnd;
         this.vehiculos = new ListaDoubleLinkedL();
         this.usuarios = new ListaDoubleLinkedL();
         this.colaOcupados = new ColaPrioridadMonticulo(20);
@@ -544,11 +550,10 @@ public class SistemaViajes {
      * @return true si se encontro un destino y el viaje continua, false en caso contrario
      */
     public boolean realizarPickup(Vehiculo vehiculo) {
-        Random rnd = new Random();
         int destino;
         int[] ruta = new int[0];
         for (int intentos = 0; intentos < 100 && ruta.length < 2; intentos++) {
-            destino = rnd.nextInt(grafo.getOrden());
+            destino = this.rnd.nextInt(grafo.getOrden());
             if (destino != vehiculo.getNodoActual()) {
                 ruta = ruteador.calcularRuta(vehiculo.getNodoActual(), destino);
             }
