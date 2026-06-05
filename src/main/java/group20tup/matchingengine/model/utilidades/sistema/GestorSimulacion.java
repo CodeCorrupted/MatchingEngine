@@ -6,7 +6,6 @@ import group20tup.matchingengine.model.recursos.simulacion.EstadoVehiculo;
 import group20tup.matchingengine.model.recursos.simulacion.Usuario;
 import group20tup.matchingengine.model.recursos.simulacion.Vehiculo;
 import group20tup.matchingengine.model.utilidades.CalculadorRutas;
-import group20tup.matchingengine.view.MapCanvas;
 import java.util.Random;
 
 /**
@@ -40,7 +39,6 @@ public class GestorSimulacion implements MotorSimulacion {
     }
 
     private final SistemaViajes sistema;
-    private final MapCanvas renderizador;
     private final GrafoMapa grafo;
     private CalculadorRutas ruteador;
     private final Random rnd;
@@ -71,16 +69,14 @@ public class GestorSimulacion implements MotorSimulacion {
     /**
      * Construye el gestor de simulacion con las dependencias necesarias.
      * @param sistema Sistema de viajes que gestiona el matching y las rutas
-     * @param renderizador Renderizador del mapa para actualizar la vista
      * @param grafo Grafo vial de la ciudad para consultas de conectividad
      */
-    public GestorSimulacion(SistemaViajes sistema, MapCanvas renderizador, GrafoMapa grafo, CalculadorRutas ruteador) {
-        this(sistema, renderizador, grafo, ruteador, new Random());
+    public GestorSimulacion(SistemaViajes sistema, GrafoMapa grafo, CalculadorRutas ruteador) {
+        this(sistema, grafo, ruteador, new Random());
     }
 
-    public GestorSimulacion(SistemaViajes sistema, MapCanvas renderizador, GrafoMapa grafo, CalculadorRutas ruteador, Random rnd) {
+    public GestorSimulacion(SistemaViajes sistema, GrafoMapa grafo, CalculadorRutas ruteador, Random rnd) {
         this.sistema = sistema;
-        this.renderizador = renderizador;
         this.grafo = grafo;
         this.ruteador = ruteador;
         this.rnd = rnd;
@@ -165,10 +161,10 @@ public class GestorSimulacion implements MotorSimulacion {
     }
 
     /**
-     * Crea las entidades iniciales de la simulacion y renderiza el frame inicial.
+     * Crea las entidades iniciales de la simulacion.
      * <p>
-     *     Crea 5 usuarios y 10 vehiculos ubicados aleatoriamente en el grafo
-     *     y renderiza el mapa inicial. No inicia el bucle de animacion;
+     *     Crea 5 usuarios y 10 vehiculos ubicados aleatoriamente en el grafo.
+     *     No inicia el bucle de animacion;
      *     eso debe hacerlo el adaptador externo.
      * </p>
      */
@@ -179,30 +175,6 @@ public class GestorSimulacion implements MotorSimulacion {
         for (int i = 0; i < VEHICULOS_MIN; i++) {
             crearVehiculo();
         }
-        renderizarFrame();
-    }
-
-    /**
-     * Renderiza el frame completo del mapa incluyendo rutas activas, vehiculos y usuarios.
-     * <p>
-     *     Metodo publico utilizable desde el controlador para forzar un re-render
-     *     completo (por ejemplo al redimensionar la ventana).
-     * </p>
-     */
-    @Override
-    public void renderizarFrame() {
-        if (renderizador == null) return;
-        renderizador.redibujar();
-
-        for (int i = 0; i < sistema.totalVehiculos(); i++) {
-            Vehiculo v = sistema.getVehiculo(i);
-            if (v.getRutaActiva().length >= 2) {
-                renderizador.renderRutaVehiculo(v);
-            }
-        }
-
-        renderizador.renderVehiculos(sistema.getListaVehiculos());
-        renderizador.renderUsuarios(sistema.getListaUsuarios());
     }
 
     /**

@@ -21,15 +21,4 @@ public interface MotorSimulacion {
      * </p>
      */
     void tick();
-
-    /**
-     * Renderiza el estado actual de la simulacion en el mapa.
-     * <p>
-     *     Dibuja el grafo vial, las rutas activas, los vehiculos y los
-     *     usuarios sobre el canvas. Puede ser llamada por el adaptador
-     *     despues de cada tick o por el controlador en respuesta a
-     *     eventos de redimension o zoom.
-     * </p>
-     */
-    void renderizarFrame();
 }

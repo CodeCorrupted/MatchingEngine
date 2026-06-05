@@ -256,8 +256,9 @@ public class PantallaCargaController implements Initializable {
 
         System.out.println("▶ 'dashboard.fxml' cargado con éxito.");
     } catch (Exception ex) {
-        System.err.println("❌ Error al cargar 'dashboard.fxml'");
         ex.printStackTrace();
+        DialogUtils.mostrarError(btnAccion0, "Error cr\u00edtico",
+            "No se pudo cargar la pantalla principal:\n" + ex.getMessage());
     }
 }
 

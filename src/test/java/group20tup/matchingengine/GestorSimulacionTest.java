@@ -36,7 +36,7 @@ class GestorSimulacionTest {
     @BeforeEach
     void setUp() {
         s = new SistemaViajes(mapaSalta, dijkstra);
-        gestor = new GestorSimulacion(s, null, mapaSalta, dijkstra, new Random(42));
+        gestor = new GestorSimulacion(s, mapaSalta, dijkstra, new Random(42));
     }
 
     @Test
@@ -67,14 +67,13 @@ class GestorSimulacionTest {
     }
 
     @Test
-    @DisplayName("tick() funciona con renderizador null sin NPE")
-    void testTickSinJavaFX() {
+    @DisplayName("tick() funciona sin NPE")
+    void testTickSinNPE() {
         gestor.inicializarEntidades();
 
         assertDoesNotThrow(() -> gestor.tick());
         assertDoesNotThrow(() -> gestor.tick());
         assertDoesNotThrow(() -> gestor.tick());
-        assertDoesNotThrow(() -> gestor.renderizarFrame());
     }
 
     @Test

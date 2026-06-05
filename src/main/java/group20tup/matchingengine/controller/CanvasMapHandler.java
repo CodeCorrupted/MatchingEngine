@@ -21,11 +21,16 @@ public class CanvasMapHandler {
     private double mouseY;
     private boolean dragging;
     private long ultimoRenderDrag;
+    private Runnable onRender;
 
     public CanvasMapHandler(Canvas canvas, ProyeccionMapa proyeccion, GestorSimulacion gestor) {
         this.canvas = canvas;
         this.proyeccion = proyeccion;
         this.gestor = gestor;
+    }
+
+    public void setOnRender(Runnable r) {
+        this.onRender = r;
     }
 
     public void onMousePressed(MouseEvent e) {
@@ -45,8 +50,8 @@ public class CanvasMapHandler {
         mouseX = e.getX();
         mouseY = e.getY();
         long now = System.nanoTime();
-        if (gestor != null && now - ultimoRenderDrag > 30_000_000) {
-            gestor.renderizarFrame();
+        if (onRender != null && now - ultimoRenderDrag > 30_000_000) {
+            onRender.run();
             ultimoRenderDrag = now;
         }
     }
@@ -56,7 +61,7 @@ public class CanvasMapHandler {
         if (dy == 0) return;
         double factor = dy > 0 ? 1.1 : 1.0 / 1.1;
         proyeccion.zoom(factor, e.getX(), e.getY());
-        if (gestor != null) gestor.renderizarFrame();
+        if (onRender != null) onRender.run();
         e.consume();
     }
 

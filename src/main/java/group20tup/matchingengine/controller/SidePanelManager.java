@@ -231,8 +231,9 @@ public class SidePanelManager {
                 ctrl.setStage(ventana);
                 ventanaVehiculoActiva = ctrl;
             } catch (Exception ex) {
-                System.err.println("ERROR al abrir ventana: " + ex.getMessage());
                 ex.printStackTrace();
+                DialogUtils.mostrarError(mapaCanvas, "Error",
+                    "No se pudo abrir la ventana del veh\u00edculo:\n" + ex.getMessage());
             }
         } else {
             lblInfo.setText(String.format(
@@ -279,8 +280,9 @@ public class SidePanelManager {
                 ventanaVehiculosOcupadosActiva = ventana;
                 ventana.show();
             } catch (Exception ex) {
-                System.err.println("ERROR al abrir ListaVehiculosOcupados: " + ex.getMessage());
                 ex.printStackTrace();
+                DialogUtils.mostrarError(mapaCanvas, "Error",
+                    "No se pudo abrir la lista de veh\u00edculos ocupados:\n" + ex.getMessage());
             }
         }
     }
@@ -378,6 +380,19 @@ public class SidePanelManager {
         txtCantidadUsuarios.clear();
     }
 
+    private void renderFrame() {
+        if (renderizadorMapa == null) return;
+        renderizadorMapa.redibujar();
+        for (int i = 0; i < sistema.totalVehiculos(); i++) {
+            Vehiculo v = sistema.getVehiculo(i);
+            if (v.getRutaActiva().length >= 2) {
+                renderizadorMapa.renderRutaVehiculo(v);
+            }
+        }
+        renderizadorMapa.renderVehiculos(sistema.getListaVehiculos());
+        renderizadorMapa.renderUsuarios(sistema.getListaUsuarios());
+    }
+
     private void onColocarUsuario() {
         modoColocarUsuario = !modoColocarUsuario;
         if (modoColocarUsuario) {
@@ -387,7 +402,7 @@ public class SidePanelManager {
             btnColocarUsuario.getStyleClass().remove("active");
             mapaCanvas.setCursor(javafx.scene.Cursor.DEFAULT);
             renderizadorMapa.clearNodoResaltado();
-            if (gestor != null) gestor.renderizarFrame();
+            if (gestor != null) renderFrame();
         }
     }
 
@@ -401,7 +416,7 @@ public class SidePanelManager {
             btnColocarUsuario.getStyleClass().remove("active");
             mapaCanvas.setCursor(javafx.scene.Cursor.DEFAULT);
             renderizadorMapa.clearNodoResaltado();
-            if (gestor != null) gestor.renderizarFrame();
+            if (gestor != null) renderFrame();
         }
     }
 
@@ -459,8 +474,9 @@ public class SidePanelManager {
             ventanaEliminarVehiculoActiva = ventana;
             ventana.setOnHidden(evt -> ventanaEliminarVehiculoActiva = null);
         } catch (Exception ex) {
-            System.err.println("ERROR al abrir ventana Eliminar Vehiculo: " + ex.getMessage());
             ex.printStackTrace();
+            DialogUtils.mostrarError(mapaCanvas, "Error",
+                "No se pudo abrir la ventana de eliminar veh\u00edculo:\n" + ex.getMessage());
         }
     }
 

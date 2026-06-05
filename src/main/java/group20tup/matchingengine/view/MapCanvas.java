@@ -24,6 +24,11 @@ import javafx.scene.text.TextAlignment;
  *     resaltadas para visualizar los caminos calculados por los algoritmos
  *     de enrutamiento.
  * </p>
+ * <p><b>Nota MVC:</b> Esta clase (vista) importa clases del modelo
+ * ({@code Vehiculo}, {@code Usuario}, {@code GrafoMapa}, etc.) para leer
+ * su estado y renderizarlo en el canvas. Se trata de una dependencia de
+ * solo lectura deliberada y necesaria para un renderizador basado en Canvas;
+ * la vista nunca modifica el estado del modelo.</p>
  * @author Ivan
  * @version 2.0
  */

@@ -78,8 +78,9 @@ public class DispatchFlowController {
                     ventanaVehiculoSolicitadoActiva = mostrarVentana(root, "Viaje asignado", 360, 230);
                     ctrl.setStage(ventanaVehiculoSolicitadoActiva);
                 } catch (Exception ex) {
-                    System.err.println("ERROR al abrir VehiculoSolicitado: " + ex.getMessage());
                     ex.printStackTrace();
+                    DialogUtils.mostrarError(canvas, "Error",
+                        "No se pudo abrir la ventana del viaje asignado:\n" + ex.getMessage());
                 }
                 lblInfo.setText(String.format(
                         "Vehiculo: %s\nEstado: %s\nPosicion: nodo %d\nUbicacion: %s",
@@ -162,8 +163,9 @@ public class DispatchFlowController {
             ventanaColaDespachoActiva = ventana;
             ventana.show();
         } catch (Exception ex) {
-            System.err.println("ERROR al abrir ColaDespacho: " + ex.getMessage());
             ex.printStackTrace();
+            DialogUtils.mostrarError(canvas, "Error",
+                "No se pudo abrir la cola de despacho:\n" + ex.getMessage());
         }
 
         this.usuarioDespachando = usuario;
@@ -200,8 +202,9 @@ public class DispatchFlowController {
                 ventanaVehiculoSolicitadoActiva = mostrarVentana(root, "Viaje asignado", 360, 230);
                 ctrl.setStage(ventanaVehiculoSolicitadoActiva);
             } catch (Exception ex) {
-                System.err.println("ERROR al abrir VehiculoSolicitado: " + ex.getMessage());
                 ex.printStackTrace();
+                DialogUtils.mostrarError(canvas, "Error",
+                    "No se pudo abrir la ventana del viaje asignado:\n" + ex.getMessage());
             }
 
             lblInfo.setText(String.format(

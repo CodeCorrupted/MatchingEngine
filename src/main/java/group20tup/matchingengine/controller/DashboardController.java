@@ -176,7 +176,7 @@ public class DashboardController {
 
         dijkstraRuteador = new DijkstraRutas(mapa);
         sistema = new SistemaViajes(mapa, dijkstraRuteador);
-        gestor = new GestorSimulacion(sistema, renderizadorMapa, mapa, dijkstraRuteador);
+        gestor = new GestorSimulacion(sistema, mapa, dijkstraRuteador);
 
         lblInfo = new Label("Haga clic en un usuario\npara solicitar un viaje,\no en un vehiculo para\nver su informacion.");
         lblColaDespacho = new Label("");
@@ -184,6 +184,7 @@ public class DashboardController {
         lblStats = new Label("(aun sin datos)");
 
         canvasHandler = new CanvasMapHandler(mapaCanvas, proyeccion, gestor);
+        canvasHandler.setOnRender(this::renderFrame);
         dispatchFlow = new DispatchFlowController(sistema, gestor, mapa, renderizadorMapa,
                 rnd, lblInfo, lblColaDespacho, mapaCanvas);
         sidePanelMgr = new SidePanelManager(sidePanel, mapaCanvas, gestor, sistema,
@@ -194,6 +195,19 @@ public class DashboardController {
                 lblVehicleCount, lblUserCount,
                 btnColocarUsuario, btnPausar, sliderVelocidad, lblVelocidad,
                 btnToggleMapa, btnResetView, dispatchFlow);
+    }
+
+    private void renderFrame() {
+        if (renderizadorMapa == null) return;
+        renderizadorMapa.redibujar();
+        for (int i = 0; i < sistema.totalVehiculos(); i++) {
+            Vehiculo v = sistema.getVehiculo(i);
+            if (v.getRutaActiva().length >= 2) {
+                renderizadorMapa.renderRutaVehiculo(v);
+            }
+        }
+        renderizadorMapa.renderVehiculos(sistema.getListaVehiculos());
+        renderizadorMapa.renderUsuarios(sistema.getListaUsuarios());
     }
 
     private void configurarSelectorAlgoritmo() {
@@ -255,20 +269,14 @@ public class DashboardController {
         mapaCanvas.widthProperty().bind(mapContainer.widthProperty());
         mapaCanvas.heightProperty().bind(mapContainer.heightProperty());
         mapaCanvas.widthProperty().addListener((obs, old, n) -> {
-            if (gestor != null) gestor.renderizarFrame();
+            if (gestor != null) renderFrame();
         });
         mapaCanvas.heightProperty().addListener((obs, old, n) -> {
-            if (gestor != null) gestor.renderizarFrame();
+            if (gestor != null) renderFrame();
         });
 
         canvasHandler.configurarCanvas();
         mapaCanvas.setOnMouseClicked(this::onCanvasClick);
-
-        mapaCanvas.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
-            if (sidePanelMgr != null) {
-                sidePanelMgr.desactivarModoColocarUsuario();
-            }
-        });
     }
 
     private void onCanvasClick(MouseEvent e) {
@@ -292,7 +300,7 @@ public class DashboardController {
             }
 
             renderizadorMapa.setNodoResaltado(nodo);
-            gestor.renderizarFrame();
+            renderFrame();
 
             MetadataNodo md = (MetadataNodo) grafoMapa.getListaEsquinas().devolver(nodo);
             boolean ok = mostrarDialogo(Alert.AlertType.CONFIRMATION,
@@ -302,7 +310,7 @@ public class DashboardController {
                 gestor.crearUsuarioEnNodo(nodo);
             }
             renderizadorMapa.clearNodoResaltado();
-            gestor.renderizarFrame();
+            renderFrame();
             return;
         }
 
@@ -349,14 +357,15 @@ public class DashboardController {
     }
 
     private void iniciarSimulacion() {
-        renderizadorMapa.redibujar();
         gestor.inicializarEntidades();
         adaptadorSimulacion = new SimulacionFXAdapter(gestor);
+        adaptadorSimulacion.setOnRender(this::renderFrame);
         sidePanelMgr.configurarControlesSimulacion(adaptadorSimulacion);
 
         btnReiniciarSimulacion.setOnAction(evt -> sidePanelMgr.onReiniciarSimulacion());
         btnEliminarVehiculos.setOnAction(evt -> sidePanelMgr.onEliminarVehiculo());
 
+        renderFrame();
         adaptadorSimulacion.iniciar();
     }
 

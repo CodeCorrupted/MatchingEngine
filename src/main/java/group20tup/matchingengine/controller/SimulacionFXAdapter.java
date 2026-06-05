@@ -24,6 +24,7 @@ public class SimulacionFXAdapter {
     private double acumulador;
     private double velocidad = 1.0;
     private boolean pausado;
+    private Runnable onRender;
 
     /**
      * Construye el adaptador para el motor de simulacion dado.
@@ -55,9 +56,19 @@ public class SimulacionFXAdapter {
                     ticks++;
                 }
 
-                motor.renderizarFrame();
+                if (onRender != null) onRender.run();
             }
         };
+    }
+
+    /**
+     * Establece un callback que se invoca en cada frame para renderizar
+     * el estado actual del motor en la vista. Se llama incluso en frames
+     * sin ticks, para animacion fluida (~60 FPS).
+     * @param r Callback de renderizado
+     */
+    public void setOnRender(Runnable r) {
+        this.onRender = r;
     }
 
     /**
