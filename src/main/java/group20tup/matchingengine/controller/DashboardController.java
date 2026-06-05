@@ -30,6 +30,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Slider;
+import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.StackPane;
@@ -80,6 +81,12 @@ public class DashboardController {
     private Label lblVelocidad;
     @FXML
     private Button btnToggleMapa;
+    @FXML
+    private TextField txtCantidadVehiculos;
+    @FXML
+    private Button btnAgregarVehiculos;
+    @FXML
+    private Label lblVehicleCount;
 
     private VehiculoDisponibleController ventanaVehiculoActiva = null;
     private Stage ventanaVehiculoSolicitadoActiva = null;
@@ -780,6 +787,8 @@ public class DashboardController {
             adaptadorSimulacion.setVelocidad(v);
             lblVelocidad.setText(String.format("%.1f\u00D7", v));
         });
+
+        btnAgregarVehiculos.setOnAction(evt -> onAgregarVehiculos());
     }
 
     private javafx.beans.value.ChangeListener<Number> crearWidthListener() {
@@ -835,5 +844,50 @@ public class DashboardController {
             e.getViajesPorHora()
         );
         lblStats.setText(texto);
+        actualizarConteoVehiculos();
+    }
+
+    private void onAgregarVehiculos() {
+        String texto = txtCantidadVehiculos.getText().trim();
+        if (texto.isEmpty()) return;
+
+        int cantidad;
+        try {
+            cantidad = Integer.parseInt(texto);
+        } catch (NumberFormatException e) {
+            mostrarAlerta("Cantidad invalida", "Ingrese un numero entero positivo.");
+            return;
+        }
+
+        if (cantidad <= 0) {
+            mostrarAlerta("Cantidad invalida", "Ingrese un numero mayor a 0.");
+            return;
+        }
+
+        if (!gestor.puedeAgregarVehiculos(cantidad)) {
+            int disponibles = GestorSimulacion.getLimiteVehiculos() - sistema.totalVehiculos();
+            mostrarAlerta("Limite alcanzado",
+                "No se pueden agregar " + cantidad + " vehiculos.\n"
+                + "Limite: " + GestorSimulacion.getLimiteVehiculos() + " | "
+                + "Actuales: " + sistema.totalVehiculos() + " | "
+                + "Disponibles: " + disponibles);
+            return;
+        }
+
+        gestor.agregarVehiculos(cantidad);
+        txtCantidadVehiculos.clear();
+    }
+
+    private void actualizarConteoVehiculos() {
+        if (sistema == null) return;
+        lblVehicleCount.setText(sistema.totalVehiculos() + " / " + GestorSimulacion.getLimiteVehiculos());
+    }
+
+    private void mostrarAlerta(String titulo, String mensaje) {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle(titulo);
+        alert.setHeaderText(null);
+        alert.setContentText(mensaje);
+        alert.showAndWait();
     }
 }

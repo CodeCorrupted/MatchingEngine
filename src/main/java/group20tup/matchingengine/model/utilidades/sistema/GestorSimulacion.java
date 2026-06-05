@@ -28,6 +28,11 @@ public class GestorSimulacion implements MotorSimulacion {
     private static final int VEHICULOS_MIN = 10;
     private static final int VEHICULOS_MAX = 15;
     private static final int MAX_TICKS_SIN_RUTA = 10;
+    private static final int LIMITE_VEHICULOS = 100;
+
+    public static int getLimiteVehiculos() {
+        return LIMITE_VEHICULOS;
+    }
 
     private final SistemaViajes sistema;
     private final MapCanvas renderizador;
@@ -37,6 +42,25 @@ public class GestorSimulacion implements MotorSimulacion {
     private int contadorUsuarios;
     private int contadorVehiculos;
     private int[] nodosValidos;
+
+    private boolean esNodoOcupado(int nodo) {
+        for (int i = 0; i < sistema.totalVehiculos(); i++) {
+            if (sistema.getVehiculo(i).getNodoActual() == nodo) return true;
+        }
+        for (int i = 0; i < sistema.totalUsuarios(); i++) {
+            if (sistema.getUsuario(i).getNodoOrigen() == nodo) return true;
+        }
+        return false;
+    }
+
+    private int nodoNoOcupadoAleatorio() {
+        int orden = grafo.getOrden();
+        for (int intento = 0; intento < orden; intento++) {
+            int nodo = rnd.nextInt(orden);
+            if (!esNodoOcupado(nodo)) return nodo;
+        }
+        return rnd.nextInt(orden);
+    }
 
     /**
      * Construye el gestor de simulacion con las dependencias necesarias.
@@ -324,7 +348,7 @@ public class GestorSimulacion implements MotorSimulacion {
      * Crea un nuevo usuario en una ubicacion aleatoria del grafo.
      */
     private void crearUsuario() {
-        int nodo = rnd.nextInt(grafo.getOrden());
+        int nodo = nodoNoOcupadoAleatorio();
         Usuario u = new Usuario(contadorUsuarios++, nodo);
         sistema.agregarUsuario(u);
     }
@@ -336,10 +360,20 @@ public class GestorSimulacion implements MotorSimulacion {
      * </p>
      */
     private void crearVehiculo() {
-        int nodo = rnd.nextInt(grafo.getOrden());
+        int nodo = nodoNoOcupadoAleatorio();
         String patente = String.format("V%03d", contadorVehiculos++);
         Vehiculo v = new Vehiculo(patente, nodo);
         sistema.registrarVehiculo(v);
+    }
+
+    public void agregarVehiculos(int cantidad) {
+        for (int i = 0; i < cantidad; i++) {
+            crearVehiculo();
+        }
+    }
+
+    public boolean puedeAgregarVehiculos(int cantidad) {
+        return sistema.totalVehiculos() + cantidad <= LIMITE_VEHICULOS;
     }
 }
 

@@ -6,6 +6,7 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ProgressIndicator?>
 <?import javafx.scene.control.Slider?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
@@ -38,6 +39,12 @@
             </HBox>
             <Slider fx:id="sliderVelocidad" min="1.0" max="100" value="1.0"
                     showTickLabels="false" showTickMarks="false" />
+            <Label text="Agregar vehiculos" styleClass="section-title" />
+            <Label fx:id="lblVehicleCount" text="0 / 100" styleClass="info-label" />
+            <HBox spacing="6" alignment="CENTER_LEFT">
+                <TextField fx:id="txtCantidadVehiculos" promptText="Cantidad" prefWidth="60" />
+                <Button fx:id="btnAgregarVehiculos" text="+ Agregar" maxWidth="99999" />
+            </HBox>
         </VBox>
     </right>
 </BorderPane>
