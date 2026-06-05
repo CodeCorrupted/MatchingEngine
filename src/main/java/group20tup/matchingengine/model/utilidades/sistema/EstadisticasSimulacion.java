@@ -18,7 +18,7 @@ public class EstadisticasSimulacion {
     private double sumaETASegundos;
     private double sumaTarifas;
     private double sumaDistanciasKm;
-    private final long inicioSimulacion;
+    private long inicioSimulacion;
 
     /**
      * Construye un contador de estadisticas con el instante actual como
@@ -26,6 +26,20 @@ public class EstadisticasSimulacion {
      */
     public EstadisticasSimulacion() {
         this.inicioSimulacion = System.currentTimeMillis();
+    }
+
+    /**
+     * Reinicia todos los contadores de estadisticas a cero y
+     * restablece la marca de inicio al instante actual.
+     */
+    public synchronized void limpiar() {
+        viajesSolicitados = 0;
+        viajesCompletados = 0;
+        viajesRechazados = 0;
+        sumaETASegundos = 0.0;
+        sumaTarifas = 0.0;
+        sumaDistanciasKm = 0.0;
+        inicioSimulacion = System.currentTimeMillis();
     }
 
     /**

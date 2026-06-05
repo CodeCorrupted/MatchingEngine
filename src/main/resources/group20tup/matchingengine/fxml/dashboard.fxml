@@ -39,12 +39,15 @@
             </HBox>
             <Slider fx:id="sliderVelocidad" min="1.0" max="100" value="1.0"
                     showTickLabels="false" showTickMarks="false" />
+            <Button fx:id="btnReiniciarSimulacion" text="🔄 Reiniciar Simulacion" maxWidth="99999"
+                    styleClass="reset-button" />
             <Label text="Agregar vehiculos" styleClass="section-title" />
             <Label fx:id="lblVehicleCount" text="0 / 100" styleClass="info-label" />
             <HBox spacing="6" alignment="CENTER_LEFT">
                 <TextField fx:id="txtCantidadVehiculos" promptText="Cantidad" prefWidth="60" />
                 <Button fx:id="btnAgregarVehiculos" text="+ Agregar" maxWidth="99999" />
             </HBox>
+            <Button fx:id="btnEliminarVehiculos" text="🗑 Eliminar Vehiculo" maxWidth="99999" />
             <Label text="Agregar usuarios" styleClass="section-title" />
             <Label fx:id="lblUserCount" text="0 / 80" styleClass="info-label" />
             <Button fx:id="btnColocarUsuario" text="📌 Colocar en mapa" maxWidth="99999" />

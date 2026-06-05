@@ -396,5 +396,44 @@ public class GestorSimulacion implements MotorSimulacion {
     public boolean puedeAgregarUsuarios(int cantidad) {
         return sistema.totalUsuarios() + cantidad <= LIMITE_USUARIOS;
     }
+
+    /**
+     * Reinicia la simulacion a su estado inicial.
+     * <p>
+     *     Elimina todas las entidades actuales, reinicia los contadores
+     *     y crea las 5 entidades de usuario y 10 vehiculos iniciales.
+     *     El llamador debe detener y reiniciar el bucle de animacion.
+     * </p>
+     */
+    public void reiniciar() {
+        sistema.reiniciar();
+        contadorUsuarios = 0;
+        contadorVehiculos = 0;
+        inicializarEntidades();
+    }
+
+    /**
+     * Elimina un vehiculo del sistema por su patente.
+     * <p>
+     *     Solo permite la eliminacion si quedan al menos 10 vehiculos
+     *     en el sistema y el vehiculo esta en estado DISPONIBLE.
+     * </p>
+     * @param patente Patente del vehiculo a eliminar
+     * @return true si se elimino, false si no cumple las condiciones
+     */
+    public boolean eliminarVehiculo(String patente) {
+        if (sistema.totalVehiculos() <= VEHICULOS_MIN) return false;
+        Vehiculo v = sistema.buscarVehiculoPorPatente(patente);
+        if (v == null || v.getEstado() != EstadoVehiculo.DISPONIBLE) return false;
+        return sistema.removerVehiculoPorPatente(patente);
+    }
+
+    /**
+     * Devuelve la cantidad minima de vehiculos permitida en el sistema.
+     * @return Cantidad minima de vehiculos (10)
+     */
+    public static int getMinimoVehiculos() {
+        return VEHICULOS_MIN;
+    }
 }
 

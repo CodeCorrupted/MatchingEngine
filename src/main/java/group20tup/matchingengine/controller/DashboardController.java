@@ -95,6 +95,10 @@ public class DashboardController {
     private Label lblUserCount;
     @FXML
     private Button btnColocarUsuario;
+    @FXML
+    private Button btnReiniciarSimulacion;
+    @FXML
+    private Button btnEliminarVehiculos;
 
     private boolean modoColocarUsuario = false;
     private VehiculoDisponibleController ventanaVehiculoActiva = null;
@@ -102,6 +106,7 @@ public class DashboardController {
     private Stage ventanaVehiculosOcupadosActiva = null;
     private Stage ventanaColaDespachoActiva = null;
     private ColaDespachoController colaDespachoCtrl;
+    private Stage ventanaEliminarVehiculoActiva = null;
 
     private GrafoMapa grafoMapa;
     private ProyeccionMapa proyeccion;
@@ -834,6 +839,9 @@ public class DashboardController {
 
         btnColocarUsuario.setOnAction(evt -> onColocarUsuario());
         btnAgregarUsuarios.setOnAction(evt -> onAgregarUsuarios());
+
+        btnReiniciarSimulacion.setOnAction(evt -> onReiniciarSimulacion());
+        btnEliminarVehiculos.setOnAction(evt -> onEliminarVehiculo());
     }
 
     private javafx.beans.value.ChangeListener<Number> crearWidthListener() {
@@ -971,6 +979,81 @@ public class DashboardController {
 
         gestor.agregarUsuarios(cantidad);
         txtCantidadUsuarios.clear();
+    }
+
+    private void onReiniciarSimulacion() {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Reiniciar simulacion");
+        alert.setHeaderText(null);
+        alert.setContentText("Se eliminaran todos los vehiculos y usuarios actuales.\n"
+                + "La simulacion volvera a tener 10 vehiculos y 5 usuarios.\n"
+                + "¿Desea continuar?");
+        if (alert.showAndWait().orElse(javafx.scene.control.ButtonType.CANCEL)
+                != javafx.scene.control.ButtonType.OK) {
+            return;
+        }
+
+        adaptadorSimulacion.detener();
+
+        if (pausaDespacho != null) {
+            pausaDespacho.stop();
+        }
+
+        modoColocarUsuario = false;
+        mapaCanvas.setCursor(javafx.scene.Cursor.DEFAULT);
+
+        if (ventanaVehiculoActiva != null) {
+            ventanaVehiculoActiva.cerrar();
+            ventanaVehiculoActiva = null;
+        }
+        if (ventanaVehiculoSolicitadoActiva != null) {
+            ventanaVehiculoSolicitadoActiva.close();
+            ventanaVehiculoSolicitadoActiva = null;
+        }
+        if (ventanaVehiculosOcupadosActiva != null) {
+            ventanaVehiculosOcupadosActiva.close();
+            ventanaVehiculosOcupadosActiva = null;
+        }
+        if (ventanaColaDespachoActiva != null) {
+            ventanaColaDespachoActiva.close();
+            ventanaColaDespachoActiva = null;
+            colaDespachoCtrl = null;
+        }
+        if (ventanaEliminarVehiculoActiva != null) {
+            ventanaEliminarVehiculoActiva.close();
+            ventanaEliminarVehiculoActiva = null;
+        }
+
+        gestor.reiniciar();
+
+        btnPausar.setText("\u23F8 Pausar");
+        adaptadorSimulacion.reanudar();
+        adaptadorSimulacion.iniciar();
+        renderizadorMapa.redibujar();
+    }
+
+    private void onEliminarVehiculo() {
+        if (ventanaEliminarVehiculoActiva != null && ventanaEliminarVehiculoActiva.isShowing()) {
+            ventanaEliminarVehiculoActiva.requestFocus();
+            return;
+        }
+
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(
+                    "/group20tup/matchingengine/fxml/eliminarVehiculo.fxml"));
+            Parent root = loader.load();
+
+            EliminarVehiculoController ctrl = loader.getController();
+            ctrl.setDatos(gestor, sistema);
+
+            Stage ventana = mostrarVentana(root, "Eliminar Vehiculo", 380, 480);
+            ctrl.setStage(ventana);
+            ventanaEliminarVehiculoActiva = ventana;
+            ventana.setOnHidden(evt -> ventanaEliminarVehiculoActiva = null);
+        } catch (Exception ex) {
+            System.err.println("ERROR al abrir ventana Eliminar Vehiculo: " + ex.getMessage());
+            ex.printStackTrace();
+        }
     }
 
     private void actualizarConteoUsuarios() {

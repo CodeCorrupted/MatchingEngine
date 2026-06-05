@@ -275,6 +275,27 @@ public class SistemaViajes {
     }
 
     /**
+     * Reinicia el sistema de viajes a su estado inicial vacio.
+     * <p>
+     *     Elimina todos los vehiculos y usuarios, limpia las colas de prioridad,
+     *     cancela cualquier despacho en curso y reinicia las estadisticas.
+     *     Llamar antes de inicializar entidades nuevamente.
+     * </p>
+     */
+    public void reiniciar() {
+        vehiculos.limpiar();
+        usuarios.limpiar();
+        colaOcupados.limpiar();
+        cancelarDespacho();
+        rndDespacho = null;
+        ultimoPatenteProcesado = null;
+        usuarioDespachando = null;
+        totalCandidatos = 0;
+        candidatosProcesados = 0;
+        estadisticas.limpiar();
+    }
+
+    /**
      * Genera un texto formateado con la cola de despacho ordenada por ETA.
      * <p>
      *     Escanea todos los vehiculos disponibles, calcula su ETA al nodo
@@ -491,6 +512,25 @@ public class SistemaViajes {
     }
 
     /**
+     * Elimina un vehiculo del sistema buscandolo por su patente.
+     * <p>
+     *     Reconstruye la cola de ocupados tras la eliminacion para
+     *     mantener la consistencia interna.
+     * </p>
+     * @param patente Patente del vehiculo a eliminar
+     * @return true si se elimino correctamente, false si no se encontro
+     */
+    public boolean removerVehiculoPorPatente(String patente) {
+        Vehiculo v = buscarVehiculoPorPatente(patente);
+        if (v == null) return false;
+        int idx = buscarIndiceVehiculo(v);
+        if (idx == -1) return false;
+        vehiculos.eliminar(idx);
+        reconstruirColaOcupados();
+        return true;
+    }
+
+    /**
      * Ejecuta la recogida de un pasajero cuando el vehiculo llega a su ubicacion.
      * <p>
      *     Primero busca un destino aleatorio alcanzable mediante Dijkstra.
@@ -670,7 +710,7 @@ public class SistemaViajes {
      * @param patente Patente del vehiculo a buscar
      * @return Vehiculo encontrado, o null si no existe
      */
-    private Vehiculo buscarVehiculoPorPatente(String patente) {
+    public Vehiculo buscarVehiculoPorPatente(String patente) {
         for (int i = 0; i < vehiculos.tamanio(); i++) {
             Vehiculo v = (Vehiculo) vehiculos.devolver(i);
             if (v.getPatente().equals(patente)) return v;
